@@ -16,6 +16,7 @@ const CreationPage: NextPage = () => {
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(-1);
   const [lichessStudyUrl, setLichessStudyUrl] = useState("");
+  const [boardWidth, setBoardWidth] = useState(700);
 
   const handlePreviousMove = useCallback(() => {
     if (currentMoveIndex > 0) {
@@ -123,6 +124,16 @@ const CreationPage: NextPage = () => {
     }
   }, [moveHistory]);
 
+  useEffect(() => {
+    const updateBoardWidth = () => {
+      setBoardWidth(Math.min(700, window.innerWidth * 0.65));
+    };
+    
+    updateBoardWidth();
+    window.addEventListener('resize', updateBoardWidth);
+    return () => window.removeEventListener('resize', updateBoardWidth);
+  }, []);
+
   return (
     <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
       {/* Background Eclipse Elements */}
@@ -195,7 +206,7 @@ const CreationPage: NextPage = () => {
                     <Chessboard 
                       position={game.fen()}
                       onPieceDrop={onDrop}
-                      boardWidth={Math.min(700, window.innerWidth * 0.65)}
+                      boardWidth={boardWidth}
                       customBoardStyle={{
                         borderRadius: "4px",
                         boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
