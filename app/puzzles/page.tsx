@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
@@ -14,6 +14,20 @@ const PuzzlesPage = () => {
   const [showSolution, setShowSolution] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [selectedPositionSet, setSelectedPositionSet] = useState('beginner');
+  const [selectedSet, setSelectedSet] = useState<string | null>(null);
+  const [currentPuzzleIndex, setCurrentPuzzleIndex] = useState(0);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [boardWidth, setBoardWidth] = useState(700);
+
+  useEffect(() => {
+    const updateBoardWidth = () => {
+      setBoardWidth(Math.min(700, window.innerWidth * 0.65));
+    };
+    
+    updateBoardWidth();
+    window.addEventListener('resize', updateBoardWidth);
+    return () => window.removeEventListener('resize', updateBoardWidth);
+  }, []);
 
   const positionSets = [
     {
@@ -131,7 +145,7 @@ const PuzzlesPage = () => {
                   <Chessboard 
                     position={game.fen()}
                     onPieceDrop={onDrop}
-                    boardWidth={Math.min(700, window.innerWidth * 0.65)}
+                    boardWidth={boardWidth}
                     customBoardStyle={{
                       borderRadius: "4px",
                       boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
