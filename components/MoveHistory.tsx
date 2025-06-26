@@ -40,7 +40,6 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory,
             bUTTON={showHistory ? "ON" : "OFF"}
             onLogInButtonContainerClick={() => setShowHistory(false)}
             className={`!py-1 !px-3 !text-xs !rounded`}
-            style={showHistory ? { borderColor: 'var(--blue-84)', color: 'var(--blue-84)' } : {}}
           />
           <span className="text-white/80 text-xs">Show history</span>
         </div>

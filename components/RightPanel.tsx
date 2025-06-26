@@ -65,7 +65,6 @@ const RightPanel: React.FC<RightPanelProps> = ({
         bUTTON={autoStartingMoves ? "ON" : "OFF"}
         onLogInButtonContainerClick={() => setAutoStartingMoves(v => !v)}
         className={`!py-1 !px-3 !text-xs !rounded`}
-        style={autoStartingMoves ? { borderColor: 'var(--blue-84)', color: 'var(--blue-84)' } : {}}
       />
       <span className="text-white/80 text-sm">Automatic starting moves</span>
     </div>
@@ -88,7 +87,6 @@ const RightPanel: React.FC<RightPanelProps> = ({
         bUTTON={hintMode ? "ON" : "OFF"}
         onLogInButtonContainerClick={() => setHintMode(v => !v)}
         className={`!py-1 !px-3 !text-xs !rounded`}
-        style={hintMode ? { borderColor: 'var(--blue-84)', color: 'var(--blue-84)' } : {}}
       />
       <span className="text-white/80 text-sm">Hint mode</span>
     </div>

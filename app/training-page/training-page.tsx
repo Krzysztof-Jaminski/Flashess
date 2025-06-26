@@ -68,6 +68,23 @@ const PGN_EXAMPLE_FULL = `[Event "PGN Example"]
 
 1. Nf3 d5 2. g3 c5 3. Bg2 Nc6 4. O-O e5 5. d3 Nf6 6. Nbd2 Be7 7. e4 O-O 8. Re1 dxe4 9. dxe4 *`;
 
+function smartSort(a: string, b: string): number {
+  // Poprawiony regex: myślnik na końcu klasy znaków
+  const regex = /^([a-zA-Z_ \-]*?)(\d+)([a-zA-Z_ \-]*)$/;
+  const matchA = a.match(regex);
+  const matchB = b.match(regex);
+
+  if (matchA && matchB) {
+    const [, prefixA, numA, suffixA] = matchA;
+    const [, prefixB, numB, suffixB] = matchB;
+
+    if (prefixA === prefixB && suffixA === suffixB) {
+      return parseInt(numA, 10) - parseInt(numB, 10);
+    }
+  }
+  return a.localeCompare(b);
+}
+
 const TrainingPage: NextPage = () => {
   const [game, setGame] = useState(new Chess());
   const [boardWidth, setBoardWidth] = useState(600);
@@ -95,7 +112,9 @@ const TrainingPage: NextPage = () => {
 
   // Pobieranie ćwiczeń z API
   const fetchExercises = async () => {
-    setExercises(getExercises());
+    const fetchedExercises = getExercises();
+    const sortedExercises = fetchedExercises.sort((a, b) => smartSort(a.id, b.id));
+    setExercises(sortedExercises);
   };
 
   // Funkcja do ustawiania pozycji na podstawie indeksu historii
