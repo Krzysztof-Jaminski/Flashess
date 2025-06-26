@@ -1,76 +1,14 @@
 "use client";
-import type { NextPage } from "next";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Chess } from "chess.js";
-import { Chessboard } from "react-chessboard";
-import TopBar from "../../components/topbar";
-import Buttons from "../../components/buttons";
-import { API_BASE_URL } from "../../utils/apiConfig";
-import { getExercises, Exercise } from "../../utils/exercises";
-import ExerciseList from "../../components/ExerciseList";
-import TrainingBoard from "../../components/TrainingBoard";
-import RightPanel from "../../components/RightPanel";
-// @ts-ignore
-// import exercisesData from "../utils/exercises.json";
+import TopBar from "./topbar";
+import { getExercises, Exercise } from "../utils/exercises";
+import ExerciseList from "./ExerciseList";
+import TrainingBoard from "./TrainingBoard";
+import RightPanel from "./RightPanel";
 
-// Nowy typ ćwiczenia oparty na PGN
-const exampleExercisePGN = `1. Nf3 d5 2. g3 c5 3. Bg2 Nc6 4. O-O e5 5. d3 Nf6 6. Nbd2 Be7 7. e4 O-O 8. Re1 dxe4 9. dxe4`;
-const KIA1_PGN = `1. Nf3 Nf6 2. g3 c5 3. Bg2 Nc6 4. O-O e5 5. d3 d5 6. Nbd2 Be7 7. c3 O-O 8. e4 d4 9. Nc4 Qc7 10. cxd4 cxd4 11. Qc2 Qb8 12. Bd2 Bg4 13. h3 Be6 14. Ng5 Bd7 15. f4 Nh5 16. fxe5 b5 17. Nd6 Nxe5 18. Ndxf7 Nxf7 19. Nxf7 Be6 20. g4 Rxf7 21. gxh5 Qe5 22. Rxf7 Bxf7 23. Rf1 Qxh5 24. Qc7 Qc5 25. Rc1 Qxc7 26. Rxc7 Bd8 27. Rc6 Bb6 28. a3 Re8 29. Bf4 Be6 30. h4 Kf7 31. h5 Rc8 32. Rxe6`;
-
-// Funkcja do parsowania pełnego PGN z metadanymi
-function parseFullPGN(pgn: string): string[] {
-  // Usuwa nagłówki, komentarze, warianty i wyciąga główną linię ruchów
-  let movesPart = pgn
-    .replace(/\[[^\]]*\]/g, "") // usuń nagłówki
-    .replace(/\{[^}]*\}/g, "") // usuń komentarze
-    .replace(/\([^)]*\)/g, "") // usuń warianty
-    .replace(/\d+\./g, "") // usuń numery ruchów
-    .replace(/\d+-\d+|1-0|0-1|1\/2-1\/2/g, "") // usuń wynik
-    .replace(/\s+/g, " ")
-    .trim();
-  return movesPart.split(" ").filter(Boolean);
-}
-
-const KIA2_PGN = `[Event "NIC Classic Prelim 2021"]
-[Site "chess24.com INT"]
-[Date "2021.04.25"]
-[Round "9.7"]
-[White "Mamedyarov, S.."]
-[Black "Dominguez Perez, L.."]
-[Result "1-0"]
-[GameId "71IyEOPU"]
-[WhiteElo "2770"]
-[BlackElo "2758"]
-[Variant "Standard"]
-[TimeControl "-"]
-[ECO "A05"]
-[Opening "Zukertort Opening"]
-[Termination "Normal"]
-[Annotator "lichess.org"]
-\n1. Nf3 Nf6 { A05 Zukertort Opening } 2. g3 c5 3. Bg2 Nc6 4. O-O e5 5. d3 d5 6. Nbd2 Be7 7. c3 O-O 8. e4 d4 9. Nc4 Qc7 10. cxd4 cxd4 11. Qc2 Qb8 12. Bd2 Bg4 13. h3?! { (-0.44 → -1.08) Inaccuracy. Nh4 was best. } (13. Nh4 b5 14. Na5 Nxa5 15. Bxa5 b4 16. Nf5 Bxf5 17. exf5 Qb5 18. Bc7 Rac8 19. Rac1 e4) 13... Be6 14. Ng5 Bd7 15. f4 Nh5 16. fxe5 b5? { (-1.41 → 0.00) Mistake. Nxg3 was best. } (16... Nxg3) 17. Nd6 Nxe5 18. Ndxf7 Nxf7 19. Nxf7 Be6?! { (0.00 → 0.76) Inaccuracy. Nxg3 was best. } (19... Nxg3 20. Qb3 Ne2+ 21. Kh1 Ng3+) 20. g4 Rxf7?! { (0.83 → 1.48) Inaccuracy. Rc8 was best. } (20... Rc8) 21. gxh5?! { (1.48 → 0.63) Inaccuracy. Rxf7 was best. } (21. Rxf7 Kxf7 22. e5 Qc8 23. Qd1 Rb8 24. gxh5 Qd7 25. h6 Kg8 26. Qh5 g6 27. Qf3 Rc8) 21... Qe5 22. Rxf7 Bxf7 23. Rf1 Qxh5 24. Qc7?! { (0.55 → 0.00) Inaccuracy. Rf5 was best. } (24. Rf5) 24... Qc5?! { (0.00 → 0.88) Inaccuracy. Re8 was best. } (24... Re8 25. Bf4 Be6 26. Kh2 Bf6 27. e5 Bg5 28. b3 Qh6 29. Bg3 Qg6 30. Be4 Qh6) 25. Rc1?! { (0.88 → 0.28) Inaccuracy. Qxc5 was best. } (25. Qxc5 Bxc5) 25... Qxc7 26. Rxc7 Bd8 27. Rc6 Bb6? { (0.04 → 1.24) Mistake. Bxa2 was best. } (27... Bxa2 28. Rc5 Be6 29. Rxb5 Rc8 30. Bf4 Bb6 31. h4 Rc5 32. Rb4 Rh5 33. Bg3 Rc5 34. Kf2) 28. a3 Re8 29. Bf4 Be6 30. h4 Kf7 31. h5 Rc8?? { (0.50 → 6.74) Blunder. Bd7 was best. } (31... Bd7 32. Rc2) 32. Rxe6 { Black resigns. } 1-0`;
-
-function parsePGN(pgn: string): string[] {
-  // Parsuje PGN do listy ruchów SAN
-  return pgn
-    .replace(/\d+\./g, "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-}
-
-const PGN_EXAMPLE_FULL = `[Event "PGN Example"]
-[Site "local"]
-[Date "2024.01.01"]
-[Round "1"]
-[White "White"]
-[Black "Black"]
-[Result "*"]
-
-1. Nf3 d5 2. g3 c5 3. Bg2 Nc6 4. O-O e5 5. d3 Nf6 6. Nbd2 Be7 7. e4 O-O 8. Re1 dxe4 9. dxe4 *`;
-
-const TrainingPage: NextPage = () => {
+const TrainingContainer: React.FC = () => {
   const [game, setGame] = useState(new Chess());
-  const [boardWidth, setBoardWidth] = useState(600);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [currentExercise, setCurrentExercise] = useState<Exercise | null>(null);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
@@ -81,16 +19,26 @@ const TrainingPage: NextPage = () => {
   const [totalMoves, setTotalMoves] = useState(0);
   const [mistakes, setMistakes] = useState<number[]>([]);
   const [showMistakes, setShowMistakes] = useState(false);
-  const [boardHighlight, setBoardHighlight] = useState<string | null>(null); // 'red' jeśli błąd
+  const [boardHighlight, setBoardHighlight] = useState<string | null>(null);
   const [hintMode, setHintMode] = useState(false);
   const [pendingComputerMove, setPendingComputerMove] = useState<string | null>(null);
   const [userMaxMoves, setUserMaxMoves] = useState<string>("");
   const [boardOrientation, setBoardOrientation] = useState<'white' | 'black'>('white');
   const [autoStartingMoves, setAutoStartingMoves] = useState(false);
-  const [autoMovesLimit, setAutoMovesLimit] = useState('4');
-  const [historyIndex, setHistoryIndex] = useState<number | null>(null); // null = tryb treningowy
-  const [preHistoryTrainingIndex, setPreHistoryTrainingIndex] = useState<number | null>(null); // do powrotu
+  const [autoMovesLimit, setAutoMovesLimit] = useState('3');
+  const [historyIndex, setHistoryIndex] = useState<number | null>(null);
+  const [preHistoryTrainingIndex, setPreHistoryTrainingIndex] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [exerciseStats, setExerciseStats] = useState<{ [id: string]: { total: number; perfect: number } }>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return JSON.parse(localStorage.getItem("exerciseStats") || "{}") || {};
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  });
   const boardRef = useRef<any>(null);
 
   // Pobieranie ćwiczeń z API
@@ -134,7 +82,7 @@ const TrainingPage: NextPage = () => {
   }, [currentExercise, historyIndex, currentMoveIndex]);
 
   // Obsługa ruchu na szachownicy
-  const onPieceDrop = (sourceSquare: string, targetSquare: string, piece?: string) => {
+  const onPieceDrop = (sourceSquare: string, targetSquare: string, piece: string): boolean => {
     if (historyIndex !== null && currentExercise) {
       // wróć do trybu treningowego
       const idx = preHistoryTrainingIndex ?? currentExercise.analysis.length;
@@ -318,11 +266,6 @@ const TrainingPage: NextPage = () => {
     }
   };
 
-  const handleShowSolution = () => {
-    setShowSolution(true);
-    setIsCorrect(false);
-  };
-
   // HINT MODE: podświetlenie pola figury do ruszenia
   let hintSquares: { [square: string]: React.CSSProperties } = {};
   if (hintMode && currentExercise && currentMoveIndex < currentExercise.analysis.length) {
@@ -336,53 +279,26 @@ const TrainingPage: NextPage = () => {
     }
   }
 
-  // Renderowanie listy zagranych ruchów
-  const renderMoveList = () => {
-    if (!currentExercise) return null;
-    if (!showHistory) return (
-      <div className="flex items-center gap-2 mt-2 mb-1">
-        <Buttons
-          bUTTON={showHistory ? "ON" : "OFF"}
-          onLogInButtonContainerClick={() => setShowHistory(true)}
-          className={`!py-1 !px-3 !text-xs !rounded ${showHistory ? 'border-cyan-400 text-cyan-300' : ''}`}
-        />
-        {!showHistory && <span className="text-white/80 text-xs">Show history</span>}
-      </div>
-    );
-    const moves = currentExercise.analysis.map(a => a.move).filter(m => !["0-1", "1-0", "*", "½-½"].includes(m));
-    let out: string[] = [];
-    for (let i = 0; i < moves.length; i += 2) {
-      const num = Math.floor(i / 2) + 1;
-      const white = moves[i] || "";
-      const black = moves[i + 1] || "";
-      out.push(`${num}. ${white} ${black}`.trim());
-    }
-    return (
-      <div className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-2 text-xs text-white/80 max-h-64 overflow-y-auto custom-scrollbar">
-        <div className="font-bold mb-1 flex items-center justify-between">
-          <span>Move history</span>
-          <div className="flex items-center gap-2">
-            <Buttons
-              bUTTON={showHistory ? "ON" : "OFF"}
-              onLogInButtonContainerClick={() => setShowHistory(false)}
-              className={`!py-1 !px-3 !text-xs !rounded ${showHistory ? 'border-cyan-400 text-cyan-300' : ''}`}
-            />
-            <span className="text-white/80 text-xs">Show history</span>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-x-3 gap-y-1">
-          {out.map((line, idx) => (
-            <span key={idx} className={historyIndex !== null && Math.floor(historyIndex/2) === idx ? "text-cyan-400 font-bold" : ""}>{line}</span>
-          ))}
-        </div>
-        <div className="mt-1 text-white/50 text-xs">Use ←/→ arrows to browse history</div>
-      </div>
-    );
-  };
-
   useEffect(() => {
     fetchExercises();
   }, []);
+
+  useEffect(() => {
+    if (!currentExercise || !showMistakes) return;
+    setExerciseStats(prev => {
+      const prevStats = prev[currentExercise.id] || { total: 0, perfect: 0 };
+      const newStats = {
+        total: prevStats.total + 1,
+        perfect: mistakes.length === 0 ? prevStats.perfect + 1 : prevStats.perfect
+      };
+      const updated = { ...prev, [currentExercise.id]: newStats };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("exerciseStats", JSON.stringify(updated));
+      }
+      return updated;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showMistakes]);
 
   return (
     <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
@@ -392,23 +308,20 @@ const TrainingPage: NextPage = () => {
         <div className="absolute top-[22%] right-[-15%] w-[35rem] h-[35rem] rounded-full bg-[rgba(36,245,228,0.15)] blur-[100px]" />
       </div>
 
-      <main className="w-full flex flex-col !pt-[0rem] !pb-[2rem] !pl-[0rem] !pr-[0rem] box-border gap-[0.5rem] max-w-full mq1225:!pb-[2rem] mq1225:box-border mq450:gap-[0.3rem] mq450:!pb-[1rem] mq450:box-border mq1525:h-auto">
-        <main className="w-full flex flex-col gap-[0.7rem] max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-[0.5rem] mq450:gap-[0.2rem]">
+      <main className="w-full flex flex-col !pt-[0rem] !pb-[10rem] !pl-[0rem] !pr-[0rem] box-border gap-[1.2rem] max-w-full mq1225:!pb-[4rem] mq1225:box-border mq450:gap-[0.7rem] mq450:!pb-[2rem] mq450:box-border mq1525:h-auto">
+        <main className="w-full flex flex-col gap-[1.5rem] max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-[1rem] mq450:gap-[0.5rem]">
           <div className="w-full">
             <TopBar />
           </div>
-          <div className="w-full px-1 mt-[-0.5rem]">
-            <div className="flex flex-row gap-4 max-w-[1400px] mx-auto items-start">
-              {/* Lewa kolumna - Lista ćwiczeń */}
+          <div className="w-full px-1">
+            <div className="flex flex-row gap-4 max-w-[1400px] mx-auto">
               <ExerciseList
                 exercises={exercises}
                 currentExercise={currentExercise}
                 onSelect={loadExercise}
                 onRandom={loadRandomExercise}
-                exerciseStats={{}}
+                exerciseStats={exerciseStats}
               />
-
-              {/* Środkowa kolumna - Szachownica */}
               <TrainingBoard
                 game={game}
                 boardHighlight={boardHighlight}
@@ -419,8 +332,6 @@ const TrainingPage: NextPage = () => {
                 currentMoveIndex={currentMoveIndex}
                 currentExercise={currentExercise}
               />
-
-              {/* Prawa kolumna - Fiszki z błędami i panele */}
               <RightPanel
                 userMaxMoves={userMaxMoves}
                 setUserMaxMoves={setUserMaxMoves}
@@ -450,4 +361,4 @@ const TrainingPage: NextPage = () => {
   );
 };
 
-export default TrainingPage;
+export default TrainingContainer; 

@@ -1,326 +1,390 @@
 "use client";
 import type { NextPage } from "next";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import TopBar from "../../components/topbar";
 import Buttons from "../../components/buttons";
+import type { Square } from "chess.js";
+import { API_BASE_URL } from "../../utils/apiConfig";
+
+interface PopularMove {
+  move: string;
+  winRate: number;
+  drawRate: number;
+  lossRate: number;
+  evaluation: number;
+}
+
+interface AnalysisMove {
+  move: string;
+  evaluation: number;
+  isCritical: boolean;
+}
 
 const CreationPage: NextPage = () => {
   const [game, setGame] = useState(new Chess());
-  const [analysis, setAnalysis] = useState<string[]>([]);
-  const [opponentName, setOpponentName] = useState("");
-  const [preferredOpening, setPreferredOpening] = useState("");
-  const [isSetupMode, setIsSetupMode] = useState(false);
-  const [importCode, setImportCode] = useState("");
-  const [moveHistory, setMoveHistory] = useState<string[]>([]);
-  const [currentMoveIndex, setCurrentMoveIndex] = useState(-1);
-  const [lichessStudyUrl, setLichessStudyUrl] = useState("");
   const [boardWidth, setBoardWidth] = useState(700);
+  const [popularMoves, setPopularMoves] = useState<PopularMove[]>([]);
+  const [analysis, setAnalysis] = useState<AnalysisMove[]>([]);
+  const [selectedMove, setSelectedMove] = useState<string | null>(null);
+  const [boardHighlight, setBoardHighlight] = useState<string>("");
+  const [criticalThreshold, setCriticalThreshold] = useState<number>(1.0);
+  const [isStockfishMode, setIsStockfishMode] = useState(false);
+  const [stockfishMoves, setStockfishMoves] = useState<string[]>([]);
+  const [exerciseName, setExerciseName] = useState("");
+  const boardRef = useRef<any>(null);
 
-  const handlePreviousMove = useCallback(() => {
-    if (currentMoveIndex > 0) {
-      const newIndex = currentMoveIndex - 1;
-      setCurrentMoveIndex(newIndex);
-      const newGame = new Chess();
-      const moves = game.history().slice(0, newIndex + 1);
-      moves.forEach(move => newGame.move(move));
-      setGame(newGame);
-    }
-  }, [currentMoveIndex, game]);
-
-  const handleNextMove = useCallback(() => {
-    if (currentMoveIndex < moveHistory.length - 1) {
-      const newIndex = currentMoveIndex + 1;
-      setCurrentMoveIndex(newIndex);
-      const newGame = new Chess();
-      const moves = game.history().slice(0, newIndex + 1);
-      moves.forEach(move => newGame.move(move));
-      setGame(newGame);
-    }
-  }, [currentMoveIndex, moveHistory.length, game]);
-
-  // Handle keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        handlePreviousMove();
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        handleNextMove();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handlePreviousMove, handleNextMove]);
-
-  const onDrop = (sourceSquare: string, targetSquare: string) => {
+  const fetchPopularMoves = async (fen: string) => {
     try {
-      const move = game.move({
-        from: sourceSquare,
-        to: targetSquare,
-        promotion: "q",
-      });
+      const mockMoves: PopularMove[] = [
+        {
+          move: "e4",
+          winRate: 45,
+          drawRate: 35,
+          lossRate: 20,
+          evaluation: 0.3,
+        },
+        {
+          move: "d4",
+          winRate: 42,
+          drawRate: 38,
+          lossRate: 20,
+          evaluation: 0.2,
+        },
+        {
+          move: "Nf3",
+          winRate: 40,
+          drawRate: 40,
+          lossRate: 20,
+          evaluation: 0.1,
+        },
+        {
+          move: "c4",
+          winRate: 38,
+          drawRate: 42,
+          lossRate: 20,
+          evaluation: 0.0,
+        },
+        {
+          move: "g3",
+          winRate: 35,
+          drawRate: 45,
+          lossRate: 20,
+          evaluation: -0.1,
+        },
+      ];
 
-      if (move === null) return false;
-      
-      // Calculate move number and notation
-      const moveNumber = Math.floor(game.history().length / 2) + 1;
-      const isWhiteMove = game.history().length % 2 === 0;
-      let moveNotation = '';
-      
-      if (isWhiteMove) {
-        moveNotation = `${moveNumber}. ${move.san}`;
-      } else {
-        // For black moves, check if we need to add the move number
-        const lastMove = moveHistory[moveHistory.length - 1];
-        if (lastMove && lastMove.startsWith(`${moveNumber}.`)) {
-          // If the last move was white's move in this number, append to it
-          moveNotation = `${moveNumber}... ${move.san}`;
-        } else {
-          // If it's a new move number, start fresh
-          moveNotation = `${moveNumber}... ${move.san}`;
-        }
-      }
-      
-      setMoveHistory(prev => [...prev, moveNotation]);
-      setCurrentMoveIndex(moveHistory.length);
-      setGame(new Chess(game.fen()));
-      return true;
-    } catch (e) {
+      const sorted = mockMoves.sort(
+        (a, b) => b.winRate + b.drawRate - (a.winRate + a.drawRate)
+      );
+      setPopularMoves(sorted);
+
+      // Rzeczywiste API:
+      // const response = await fetch(`${API_BASE_URL}/api/popular-moves`, {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ fen })
+      // });
+      // const data = await response.json();
+      // setPopularMoves(data.moves.sort((a, b) => (b.winRate + b.drawRate) - (a.winRate + a.drawRate)));
+    } catch (error) {
+      console.error("Error fetching popular moves:", error);
+    }
+  };
+
+  const checkPositionEvaluation = async (fen: string) => {
+    try {
+      const mockEvaluation = Math.random() * 2 - 1;
+      return mockEvaluation;
+
+      // const response = await fetch(`${API_BASE_URL}/api/evaluate-position`, {...})
+      // return data.evaluation;
+    } catch (error) {
+      console.error("Error evaluating position:", error);
+      return 0;
+    }
+  };
+
+  const fetchStockfishMoves = async (fen: string) => {
+    try {
+      const mockMoves = ["e4", "d4", "Nf3", "c4", "g3"];
+      return mockMoves;
+
+      // const response = await fetch(`${API_BASE_URL}/api/stockfish-moves`, {...})
+      // return data.moves;
+    } catch (error) {
+      console.error("Error fetching Stockfish moves:", error);
+      return [];
+    }
+  };
+
+  const saveExercise = async () => {
+    try {
+      const exerciseData = {
+        name: exerciseName || "Exercise " + Date.now(),
+        initialFen: game.fen(),
+        analysis: analysis,
+        createdAt: new Date().toISOString(),
+      };
+      console.log("Saving exercise:", exerciseData);
+      alert("Exercise saved successfully!");
+
+      // await fetch(`${API_BASE_URL}/api/save-exercise`, {...})
+    } catch (error) {
+      console.error("Error saving exercise:", error);
+      alert("Error saving exercise");
+    }
+  };
+
+  const handleMoveSelect = async (move: string) => {
+    setSelectedMove(move);
+    const newGame = new Chess(game.fen());
+
+    const legalMoves = newGame.moves({ verbose: true });
+    const selected = legalMoves.find(
+      (m) => m.san === move || m.from + m.to === move
+    );
+
+    if (!selected) {
+      console.warn("Invalid move:", move);
+      return;
+    }
+
+    newGame.move({ from: selected.from, to: selected.to, promotion: "q" });
+    setGame(newGame);
+
+    const evaluation = await checkPositionEvaluation(newGame.fen());
+    const isCritical = Math.abs(evaluation) >= criticalThreshold;
+
+    setAnalysis((prev) => [
+      ...prev,
+      {
+        move,
+        evaluation,
+        isCritical,
+      },
+    ]);
+
+    if (isCritical) {
+      setBoardHighlight("rgba(135, 206, 250, 0.3)");
+      setIsStockfishMode(true);
+      const sfMoves = await fetchStockfishMoves(newGame.fen());
+      setStockfishMoves(sfMoves);
+    } else {
+      setBoardHighlight("");
+    }
+
+    fetchPopularMoves(newGame.fen());
+  };
+
+  const handlePieceDrop = (sourceSquare: Square, targetSquare: Square) => {
+    const move = {
+      from: sourceSquare,
+      to: targetSquare,
+      promotion: "q",
+    };
+    const newGame = new Chess(game.fen());
+    const result = newGame.move(move);
+    if (!result) return false;
+
+    const algebraicMove = result.san;
+
+    if (
+      isStockfishMode &&
+      !stockfishMoves.includes(algebraicMove) &&
+      !stockfishMoves.includes(move.from + move.to)
+    ) {
+      setBoardHighlight("rgba(255, 0, 0, 0.3)");
+      setTimeout(() => setBoardHighlight("rgba(135, 206, 250, 0.3)"), 1000);
       return false;
     }
-  };
 
-  const handleImportPosition = () => {
-    try {
-      const newGame = new Chess();
-      newGame.load(importCode);
-      setGame(newGame);
-      setImportCode("");
-      setMoveHistory([]);
-      setCurrentMoveIndex(-1);
-    } catch (e) {
-      alert("Invalid position code");
-    }
-  };
-
-  const handleImportLichessStudy = () => {
-    // TODO: Implement Lichess study import
-    alert("Lichess study import will be implemented soon");
+    setGame(newGame);
+    fetchPopularMoves(newGame.fen());
+    return true;
   };
 
   const handleClearBoard = () => {
     setGame(new Chess());
-    setMoveHistory([]);
-    setCurrentMoveIndex(-1);
+    setAnalysis([]);
+    setPopularMoves([]);
+    setSelectedMove(null);
+    setBoardHighlight("");
+    setIsStockfishMode(false);
+    setStockfishMoves([]);
+    fetchPopularMoves(new Chess().fen());
   };
-
-  useEffect(() => {
-    if (moveHistory.length > 0) {
-      setAnalysis(prev => [...prev, moveHistory[moveHistory.length - 1]]);
-    }
-  }, [moveHistory]);
 
   useEffect(() => {
     const updateBoardWidth = () => {
       setBoardWidth(Math.min(700, window.innerWidth * 0.65));
     };
-    
     updateBoardWidth();
-    window.addEventListener('resize', updateBoardWidth);
-    return () => window.removeEventListener('resize', updateBoardWidth);
+    window.addEventListener("resize", updateBoardWidth);
+    return () => window.removeEventListener("resize", updateBoardWidth);
+  }, []);
+
+  useEffect(() => {
+    fetchPopularMoves(game.fen());
   }, []);
 
   return (
-    <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
-      {/* Background Eclipse Elements */}
+    <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[5%] -left-[30%] w-[50rem] h-[45rem] rounded-full bg-[rgba(36,245,228,0.18)] blur-[120px]" />
         <div className="absolute top-[-5%] right-[-10%] w-[42rem] h-[42rem] rounded-full bg-[rgba(36,245,228,0.08)] blur-[100px]" />
         <div className="absolute top-[22%] right-[-15%] w-[35rem] h-[35rem] rounded-full bg-[rgba(36,245,228,0.15)] blur-[100px]" />
       </div>
 
-      <main className="w-full flex flex-col !pt-[0rem] !pb-[26.625rem] !pl-[0rem] !pr-[0rem] box-border gap-[2.625rem] max-w-full mq1225:!pb-[7.313rem] mq1225:box-border mq450:gap-[1.313rem] mq450:!pb-[4.75rem] mq450:box-border mq1525:h-auto">
-        <main className="w-full flex flex-col gap-[5.062rem] max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-[2.5rem] mq450:gap-[1.25rem]">
-          <div className="w-full">
-            <TopBar />
-          </div>
-          
-          <div className="w-full px-1">
-            <div className="mb-8 text-center">
-              <h2 className="text-2xl text-[rgba(36,245,228,0.84)] mb-4">How to use <span className="text-[rgba(36,245,228,0.84)]">Creation</span> Mode</h2>
-              <p className="text-white/80 max-w-2xl mx-auto">
-                Prepare for your next game by analyzing your opponent's style and creating custom training positions.
-                Enter your opponent's username and preferred opening to get started.
-              </p>
+      <main className="w-full flex flex-col gap-[5rem] text-left text-[0.938rem] text-White font-['Russo_One']">
+        <TopBar />
+
+        <div className="w-full px-1">
+          <div className="flex flex-row gap-4 max-w-[1400px] mx-auto">
+            {/* Analiza */}
+            <div className="w-[300px] bg-white/5 border border-white/30 rounded-lg p-4">
+              <h3 className="text-lg text-cyan-300 mb-3">Analysis</h3>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {analysis.map((move, index) => (
+                  <div
+                    key={index}
+                    className={`p-2 rounded ${
+                      move.isCritical
+                        ? "bg-red-500/20 border border-red-500/50"
+                        : "bg-white/10"
+                    }`}
+                  >
+                    <div className="text-sm font-bold">
+                      {index + 1}. {move.move}
+                    </div>
+                    <div className="text-xs text-white/70">
+                      Eval: {move.evaluation.toFixed(2)}
+                    </div>
+                    {move.isCritical && (
+                      <div className="text-xs text-red-400">
+                        Critical position!
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {analysis.length === 0 && (
+                  <div className="text-white/50 text-sm">
+                    No moves analyzed yet
+                  </div>
+                )}
+              </div>
+
+              {analysis.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <input
+                    type="text"
+                    value={exerciseName}
+                    onChange={(e) => setExerciseName(e.target.value)}
+                    placeholder="Exercise name"
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm"
+                  />
+                  <Buttons
+                    bUTTON="Save Exercise"
+                    onLogInButtonContainerClick={saveExercise}
+                    className="w-full !py-2 text-sm"
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="flex flex-row gap-1 max-w-[1400px] mx-auto">
-              {/* Move History - Left Side */}
-              <div className="w-[150px] bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg p-2">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm text-[rgba(36,245,228,0.84)]">Moves</h3>
-                  <div className="flex gap-1">
-                    <Buttons
-                      bUTTON="←"
-                      onLogInButtonContainerClick={handlePreviousMove}
-                      className="!py-0.5 !px-1.5 text-xs"
-                    />
-                    <Buttons
-                      bUTTON="→"
-                      onLogInButtonContainerClick={handleNextMove}
-                      className="!py-0.5 !px-1.5 text-xs"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  {moveHistory.map((move, index) => (
-                    <div 
-                      key={index} 
-                      className={`px-1.5 py-0.5 rounded cursor-pointer text-[11px] ${
-                        index === currentMoveIndex 
-                          ? 'bg-[rgba(36,245,228,0.84)] text-black' 
-                          : 'bg-[rgba(255,255,255,0.1)] text-white'
-                      }`}
-                      onClick={() => {
-                        setCurrentMoveIndex(index);
-                        const newGame = new Chess();
-                        const moves = game.history().slice(0, index + 1);
-                        moves.forEach(move => newGame.move(move));
-                        setGame(newGame);
-                      }}
-                    >
-                      {move}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Chess Board */}
-              <div className="flex-[0.65] bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg p-4 lg:p-6">
-                <div className="w-full aspect-square max-w-[min(700px,65vw)] mx-auto">
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Chessboard 
-                      position={game.fen()}
-                      onPieceDrop={onDrop}
-                      boardWidth={boardWidth}
-                      customBoardStyle={{
-                        borderRadius: "4px",
-                        boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
-                        width: "100%",
-                        height: "100%"
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-center gap-2 mt-4">
-                  <Buttons
-                    bUTTON={isSetupMode ? "Exit Setup" : "Setup Position"}
-                    onLogInButtonContainerClick={() => setIsSetupMode(!isSetupMode)}
-                    className="!py-1 !px-3 text-sm"
-                  />
-                  <Buttons
-                    bUTTON="Clear Board"
-                    onLogInButtonContainerClick={handleClearBoard}
-                    className="!py-1 !px-3 text-sm"
+            {/* Szachownica */}
+            <div className="flex-1 bg-white/5 border border-white/30 rounded-lg p-4 flex flex-col items-start justify-end">
+              <div className="w-full aspect-square max-w-[480px] mt-10 ml-0" style={{ alignSelf: 'flex-start' }}>
+                <div
+                  className="w-full h-full flex items-center justify-center"
+                  style={{
+                    border: boardHighlight
+                      ? `3px solid ${boardHighlight}`
+                      : "none",
+                    borderRadius: "8px",
+                    transition: "border 0.3s ease",
+                  }}
+                >
+                  <Chessboard
+                    ref={boardRef}
+                    position={game.fen()}
+                    boardWidth={boardWidth}
+                    onPieceDrop={handlePieceDrop}
+                    customBoardStyle={{
+                      borderRadius: "4px",
+                      boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
+                      width: "100%",
+                      height: "100%",
+                    }}
                   />
                 </div>
               </div>
+              <div className="flex justify-center gap-2 mt-4">
+                <Buttons
+                  bUTTON="Clear Board"
+                  onLogInButtonContainerClick={handleClearBoard}
+                  className="!py-1 !px-3 text-sm"
+                />
+              </div>
+            </div>
 
-              {/* Right Side - Analysis Panel */}
-              <div className="flex-[0.35] space-y-4 min-w-[280px] max-w-[400px]">
-                {/* Position Import */}
-                <div className="bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg p-4">
-                  <h3 className="text-lg text-[rgba(36,245,228,0.84)] mb-3">Import Position</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-white/80 mb-1 text-xs">FEN or PGN Code</label>
-                      <input
-                        type="text"
-                        value={importCode}
-                        onChange={(e) => setImportCode(e.target.value)}
-                        className="w-full bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.2)] rounded px-2 py-1 text-white text-xs"
-                        placeholder="Paste FEN or PGN code"
-                      />
-                    </div>
-                    <Buttons
-                      bUTTON="Import"
-                      onLogInButtonContainerClick={handleImportPosition}
-                      className="w-full !py-1 text-sm"
-                    />
-                  </div>
-                </div>
+            {/* Opening Tree */}
+            <div className="w-[300px] bg-white/5 border border-white/30 rounded-lg p-4">
+              <h3 className="text-lg text-cyan-300 mb-3">Opening Tree</h3>
 
-                {/* Lichess Study Import */}
-                <div className="bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg p-4">
-                  <h3 className="text-lg text-[rgba(36,245,228,0.84)] mb-3">Import from Lichess</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-white/80 mb-1 text-xs">Study URL</label>
-                      <input
-                        type="text"
-                        value={lichessStudyUrl}
-                        onChange={(e) => setLichessStudyUrl(e.target.value)}
-                        className="w-full bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.2)] rounded px-2 py-1 text-white text-xs"
-                        placeholder="Paste Lichess study URL"
-                      />
-                    </div>
-                    <Buttons
-                      bUTTON="Import Study"
-                      onLogInButtonContainerClick={handleImportLichessStudy}
-                      className="w-full !py-1 text-sm"
-                    />
-                  </div>
-                </div>
-
-                {/* Opponent Analysis */}
-                <div className="bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg p-4">
-                  <h3 className="text-lg text-[rgba(36,245,228,0.84)] mb-3">Opponent Analysis</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-white/80 mb-1 text-xs">Opponent's Username</label>
-                      <input
-                        type="text"
-                        value={opponentName}
-                        onChange={(e) => setOpponentName(e.target.value)}
-                        className="w-full bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.2)] rounded px-2 py-1 text-white text-xs"
-                        placeholder="Enter username (Chess.com/Lichess)"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-white/80 mb-1 text-xs">Preferred Opening</label>
-                      <input
-                        type="text"
-                        value={preferredOpening}
-                        onChange={(e) => setPreferredOpening(e.target.value)}
-                        className="w-full bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.2)] rounded px-2 py-1 text-white text-xs"
-                        placeholder="e.g., Sicilian Defense"
-                      />
-                    </div>
-                    <Buttons
-                      bUTTON="Analyze Opponent"
-                      onLogInButtonContainerClick={() => {}}
-                      className="w-full !py-1 text-sm"
-                    />
-                  </div>
-                </div>
-
-                {/* Save to Training List */}
-                <div className="bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg p-4">
-                  <h3 className="text-lg text-[rgba(36,245,228,0.84)] mb-3">Save to Training List</h3>
-                  <Buttons
-                    bUTTON="Save Current Position"
-                    onLogInButtonContainerClick={() => {}}
-                    className="w-full !py-1 text-sm"
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <label className="text-white/80 text-sm">
+                    Critical threshold:
+                  </label>
+                  <input
+                    type="number"
+                    value={criticalThreshold}
+                    onChange={(e) =>
+                      setCriticalThreshold(parseFloat(e.target.value))
+                    }
+                    step="0.1"
+                    min="0"
+                    className="w-16 bg-white/10 border border-white/20 rounded px-1 py-1 text-white text-sm"
                   />
                 </div>
+
+                {popularMoves.map((move, index) => (
+                  <div
+                    key={index}
+                    className={`p-2 rounded cursor-pointer transition-colors ${
+                      selectedMove === move.move
+                        ? "bg-cyan-400/30 border border-cyan-400/50"
+                        : "bg-white/10 hover:bg-white/15"
+                    }`}
+                    onClick={() => handleMoveSelect(move.move)}
+                  >
+                    <div className="text-sm font-bold">{move.move}</div>
+                    <div className="text-xs text-white/70">
+                      Win: {move.winRate}% | Draw: {move.drawRate}% | Loss:{" "}
+                      {move.lossRate}%
+                    </div>
+                    <div className="text-xs text-white/60">
+                      Eval: {move.evaluation.toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+
+                {isStockfishMode && (
+                  <div className="mt-4 p-2 bg-blue-500/20 border border-blue-500/50 rounded">
+                    <div className="text-sm text-blue-300 font-bold">
+                      Stockfish Mode Active
+                    </div>
+                    <div className="text-xs text-blue-200">
+                      Playing best moves...
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        </main>
+        </div>
       </main>
     </div>
   );

@@ -5,6 +5,20 @@
 @layer theme, base, components, utilities;
 @config "../tailwind.config.js";
 
+:root {
+  --blue: 36,245,228;
+  --blue-84: rgba(36,245,228,0.84);
+  --blue-50: rgba(36,245,228,0.5);
+  --blue-30: rgba(36,245,228,0.3);
+  --blue-18: rgba(36,245,228,0.18);
+  --blue-15: rgba(36,245,228,0.15);
+  --blue-08: rgba(36,245,228,0.08);
+  --green: #00FFA3;
+  --green-40: rgba(0,255,163,0.4);
+  --red: #FF0000;
+  --red-55: rgba(255,0,0,0.55);
+}
+
 body {
   @apply leading-[normal] m-0;
 }
@@ -14,4 +28,30 @@ body {
   ::after {
     border-width: 0;
   }
+}
+
+html, body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(36,245,228,0.25) #010706;
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+  width: 6px;
+  background: #010706;
+}
+html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb {
+  background: rgba(36,245,228,0.25);
+  border-radius: 6px;
+}
+
+.custom-scrollbar, .custom-scrollbar * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(36,245,228,0.25) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar, .custom-scrollbar *::-webkit-scrollbar {
+  width: 6px;
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb, .custom-scrollbar *::-webkit-scrollbar-thumb {
+  background: rgba(36,245,228,0.25);
+  border-radius: 6px;
 }

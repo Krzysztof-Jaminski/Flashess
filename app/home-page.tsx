@@ -1,6 +1,6 @@
 "use client";
 import type { NextPage } from "next";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Buttons from "../components/buttons";
@@ -8,6 +8,7 @@ import TopBar from "../components/topbar";
 
 const HomePage: NextPage = () => {
   const router = useRouter();
+  const [pingResult, setPingResult] = useState<string>("");
 
   const onLogInButtonContainerClick = useCallback(() => {
     router.push("/login-page");
@@ -24,6 +25,16 @@ const HomePage: NextPage = () => {
   const onTRANINGTextClick = useCallback(() => {
     router.push("/training-page");
   }, [router]);
+
+  const handlePing = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/ChessPreparation/ping");
+      const text = await res.text();
+      setPingResult(text);
+    } catch (e) {
+      setPingResult("Błąd połączenia");
+    }
+  };
 
   return (
     <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">

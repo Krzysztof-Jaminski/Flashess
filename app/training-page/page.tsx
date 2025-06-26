@@ -1,5 +1,5 @@
-import TrainingPage from "./training-page";
+import TrainingContainer from "../../components/TrainingContainer";
 
-export default function Page() {
-  return <TrainingPage />;
+export default function TrainingPage() {
+  return <TrainingContainer />;
 }

@@ -72,6 +72,9 @@ const TopBar: NextPage<TopBarType> = ({ className = "" }) => {
     setIsMenuOpen(!isMenuOpen);
   }, [isMenuOpen]);
 
+  const titleClass = "text-[1.8rem] font-bold";
+  const blueShadow = '0px 0px 12px var(--blue-84)';
+
   return (
     <div
       className={`w-full h-[120px] relative z-50 ${className}`}
@@ -96,7 +99,7 @@ const TopBar: NextPage<TopBarType> = ({ className = "" }) => {
 
       {/* Tytuł wyżej */}
       <h1 className="absolute left-1/2 top-[15%] transform -translate-x-1/2 text-[2rem] font-normal font-['Russo_One'] z-[2] text-center whitespace-nowrap mq850:text-[1.625rem] mq450:text-[1.188rem]">
-        <span className="text-[rgba(36,245,228,0.84)]">FLASH</span>
+        <span className="" style={{ color: 'var(--blue-84)' }}>FLASH</span>
         <span className="text-white">ESS</span>
       </h1>
 
