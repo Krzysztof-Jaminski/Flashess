@@ -15,43 +15,41 @@ export interface Exercise {
   maxMoves?: number;
 }
 
-// Prosty parser PGN (bez nagłówków)
-export function parsePGN(pgn: string): string[] {
-  return pgn
+// Helper to normalize PGN to a string of moves (optionally up to N-2 moves)
+function normalizeMoves(pgn: string, trimLast: number = 2): string {
+  let moves = pgn
+    .replace(/\[[^\]]*\]/g, "")
+    .replace(/\{[^}]*\}/g, "")
+    .replace(/\([^)]*\)/g, "")
     .replace(/\d+\./g, "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-}
-
-// Parser pełnego PGN z nagłówkami, komentarzami, wariantami
-export function parseFullPGN(pgn: string): string[] {
-  let movesPart = pgn
-    .replace(/\[[^\]]*\]/g, "") // usuń nagłówki
-    .replace(/\{[^}]*\}/g, "") // usuń komentarze
-    .replace(/\([^)]*\)/g, "") // usuń warianty
-    .replace(/\d+\./g, "") // usuń numery ruchów
-    .replace(/\d+-\d+|1-0|0-1|1\/2-1\/2|\*/g, "") // usuń wynik
+    .replace(/\d+-\d+|1-0|0-1|1\/2-1\/2|\*/g, "")
     .replace(/\s+/g, " ")
-    .trim();
-  return movesPart.split(" ").filter(Boolean);
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+  if (moves.length > trimLast) moves = moves.slice(0, moves.length - trimLast);
+  return moves.join(" ");
 }
 
 export function getExercises(): Exercise[] {
-  return (exercisesData as any[]).map((ex) => {
-    let moves: string[];
-    if (ex.pgn.includes("[")) {
-      moves = parseFullPGN(ex.pgn);
-    } else {
-      moves = parsePGN(ex.pgn);
+  const seen = new Set<string>();
+  const deduped: any[] = [];
+  for (const ex of exercisesData as any[]) {
+    const norm = normalizeMoves(ex.pgn, 2); // ignore last 2 moves for similarity
+    if (!seen.has(norm)) {
+      seen.add(norm);
+      let moves = ex.pgn.includes("[")
+        ? normalizeMoves(ex.pgn, 0).split(" ")
+        : ex.pgn.replace(/\d+\./g, "").trim().split(/\s+/).filter(Boolean);
+      deduped.push({
+        id: ex.id,
+        name: ex.name,
+        initialFen: ex.initialFen,
+        analysis: moves.map((move: string) => ({ move, evaluation: 0, isCritical: false })),
+        createdAt: new Date().toISOString(),
+        maxMoves: ex.maxMoves,
+      });
     }
-    return {
-      id: ex.id,
-      name: ex.name,
-      initialFen: ex.initialFen,
-      analysis: moves.map((move: string) => ({ move, evaluation: 0, isCritical: false })),
-      createdAt: new Date().toISOString(),
-      maxMoves: ex.maxMoves,
-    };
-  });
+  }
+  return deduped;
 } 

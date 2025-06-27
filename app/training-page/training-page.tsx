@@ -13,61 +13,6 @@ import RightPanel from "../../components/RightPanel";
 // @ts-ignore
 // import exercisesData from "../utils/exercises.json";
 
-// Nowy typ ćwiczenia oparty na PGN
-const exampleExercisePGN = `1. Nf3 d5 2. g3 c5 3. Bg2 Nc6 4. O-O e5 5. d3 Nf6 6. Nbd2 Be7 7. e4 O-O 8. Re1 dxe4 9. dxe4`;
-const KIA1_PGN = `1. Nf3 Nf6 2. g3 c5 3. Bg2 Nc6 4. O-O e5 5. d3 d5 6. Nbd2 Be7 7. c3 O-O 8. e4 d4 9. Nc4 Qc7 10. cxd4 cxd4 11. Qc2 Qb8 12. Bd2 Bg4 13. h3 Be6 14. Ng5 Bd7 15. f4 Nh5 16. fxe5 b5 17. Nd6 Nxe5 18. Ndxf7 Nxf7 19. Nxf7 Be6 20. g4 Rxf7 21. gxh5 Qe5 22. Rxf7 Bxf7 23. Rf1 Qxh5 24. Qc7 Qc5 25. Rc1 Qxc7 26. Rxc7 Bd8 27. Rc6 Bb6 28. a3 Re8 29. Bf4 Be6 30. h4 Kf7 31. h5 Rc8 32. Rxe6`;
-
-// Funkcja do parsowania pełnego PGN z metadanymi
-function parseFullPGN(pgn: string): string[] {
-  // Usuwa nagłówki, komentarze, warianty i wyciąga główną linię ruchów
-  let movesPart = pgn
-    .replace(/\[[^\]]*\]/g, "") // usuń nagłówki
-    .replace(/\{[^}]*\}/g, "") // usuń komentarze
-    .replace(/\([^)]*\)/g, "") // usuń warianty
-    .replace(/\d+\./g, "") // usuń numery ruchów
-    .replace(/\d+-\d+|1-0|0-1|1\/2-1\/2/g, "") // usuń wynik
-    .replace(/\s+/g, " ")
-    .trim();
-  return movesPart.split(" ").filter(Boolean);
-}
-
-const KIA2_PGN = `[Event "NIC Classic Prelim 2021"]
-[Site "chess24.com INT"]
-[Date "2021.04.25"]
-[Round "9.7"]
-[White "Mamedyarov, S.."]
-[Black "Dominguez Perez, L.."]
-[Result "1-0"]
-[GameId "71IyEOPU"]
-[WhiteElo "2770"]
-[BlackElo "2758"]
-[Variant "Standard"]
-[TimeControl "-"]
-[ECO "A05"]
-[Opening "Zukertort Opening"]
-[Termination "Normal"]
-[Annotator "lichess.org"]
-\n1. Nf3 Nf6 { A05 Zukertort Opening } 2. g3 c5 3. Bg2 Nc6 4. O-O e5 5. d3 d5 6. Nbd2 Be7 7. c3 O-O 8. e4 d4 9. Nc4 Qc7 10. cxd4 cxd4 11. Qc2 Qb8 12. Bd2 Bg4 13. h3?! { (-0.44 → -1.08) Inaccuracy. Nh4 was best. } (13. Nh4 b5 14. Na5 Nxa5 15. Bxa5 b4 16. Nf5 Bxf5 17. exf5 Qb5 18. Bc7 Rac8 19. Rac1 e4) 13... Be6 14. Ng5 Bd7 15. f4 Nh5 16. fxe5 b5? { (-1.41 → 0.00) Mistake. Nxg3 was best. } (16... Nxg3) 17. Nd6 Nxe5 18. Ndxf7 Nxf7 19. Nxf7 Be6?! { (0.00 → 0.76) Inaccuracy. Nxg3 was best. } (19... Nxg3 20. Qb3 Ne2+ 21. Kh1 Ng3+) 20. g4 Rxf7?! { (0.83 → 1.48) Inaccuracy. Rc8 was best. } (20... Rc8) 21. gxh5?! { (1.48 → 0.63) Inaccuracy. Rxf7 was best. } (21. Rxf7 Kxf7 22. e5 Qc8 23. Qd1 Rb8 24. gxh5 Qd7 25. h6 Kg8 26. Qh5 g6 27. Qf3 Rc8) 21... Qe5 22. Rxf7 Bxf7 23. Rf1 Qxh5 24. Qc7?! { (0.55 → 0.00) Inaccuracy. Rf5 was best. } (24. Rf5) 24... Qc5?! { (0.00 → 0.88) Inaccuracy. Re8 was best. } (24... Re8 25. Bf4 Be6 26. Kh2 Bf6 27. e5 Bg5 28. b3 Qh6 29. Bg3 Qg6 30. Be4 Qh6) 25. Rc1?! { (0.88 → 0.28) Inaccuracy. Qxc5 was best. } (25. Qxc5 Bxc5) 25... Qxc7 26. Rxc7 Bd8 27. Rc6 Bb6? { (0.04 → 1.24) Mistake. Bxa2 was best. } (27... Bxa2 28. Rc5 Be6 29. Rxb5 Rc8 30. Bf4 Bb6 31. h4 Rc5 32. Rb4 Rh5 33. Bg3 Rc5 34. Kf2) 28. a3 Re8 29. Bf4 Be6 30. h4 Kf7 31. h5 Rc8?? { (0.50 → 6.74) Blunder. Bd7 was best. } (31... Bd7 32. Rc2) 32. Rxe6 { Black resigns. } 1-0`;
-
-function parsePGN(pgn: string): string[] {
-  // Parsuje PGN do listy ruchów SAN
-  return pgn
-    .replace(/\d+\./g, "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-}
-
-const PGN_EXAMPLE_FULL = `[Event "PGN Example"]
-[Site "local"]
-[Date "2024.01.01"]
-[Round "1"]
-[White "White"]
-[Black "Black"]
-[Result "*"]
-
-1. Nf3 d5 2. g3 c5 3. Bg2 Nc6 4. O-O e5 5. d3 Nf6 6. Nbd2 Be7 7. e4 O-O 8. Re1 dxe4 9. dxe4 *`;
-
 function smartSort(a: string, b: string): number {
   // Poprawiony regex: myślnik na końcu klasy znaków
   const regex = /^([a-zA-Z_ \-]*?)(\d+)([a-zA-Z_ \-]*)$/;
@@ -108,6 +53,9 @@ const TrainingPage: NextPage = () => {
   const [historyIndex, setHistoryIndex] = useState<number | null>(null); // null = tryb treningowy
   const [preHistoryTrainingIndex, setPreHistoryTrainingIndex] = useState<number | null>(null); // do powrotu
   const [showHistory, setShowHistory] = useState(false);
+  const [autoStartMoveIndex, setAutoStartMoveIndex] = useState(0);
+  const [startBoardMoveNumber, setStartBoardMoveNumber] = useState(1);
+  const [isRandomMode, setIsRandomMode] = useState(false);
   const boardRef = useRef<any>(null);
 
   // Pobieranie ćwiczeń z API
@@ -163,12 +111,6 @@ const TrainingPage: NextPage = () => {
       return false;
     }
     if (!currentExercise) return false;
-    // Jeśli ustawiono userMaxMoves, nie pozwól na dalsze ruchy po osiągnięciu limitu
-    const maxMovesNum = parseInt(userMaxMoves);
-    if (!isNaN(maxMovesNum) && maxMovesNum > 0 && currentMoveIndex >= maxMovesNum) {
-      setShowMistakes(true);
-      return false;
-    }
     // Sprawdź, czy ruch jest legalny zanim wywołasz game.move
     const legalMoves = game.moves({ verbose: true });
     const isLegal = legalMoves.some(m => m.from === sourceSquare && m.to === targetSquare);
@@ -193,6 +135,11 @@ const TrainingPage: NextPage = () => {
           if (["0-1", "1-0", "*", "½-½"].includes(nextMove)) {
             setShowMistakes(true);
             setPendingComputerMove(null);
+            if (isRandomMode) {
+              setTimeout(() => {
+                loadRandomExercise();
+              }, 1200);
+            }
             return false;
           }
           const newGame = new Chess(game.fen());
@@ -239,6 +186,11 @@ const TrainingPage: NextPage = () => {
           if (["0-1", "1-0", "*", "½-½"].includes(nextMove)) {
             setShowMistakes(true);
             setPendingComputerMove(null);
+            if (isRandomMode) {
+              setTimeout(() => {
+                loadRandomExercise();
+              }, 1200);
+            }
             return false;
           }
           const newGame = new Chess(game.fen());
@@ -261,29 +213,34 @@ const TrainingPage: NextPage = () => {
       // Cofnij ruch
       game.undo();
       setGame(new Chess(game.fen()));
+      if (isRandomMode) {
+        setTimeout(() => {
+          loadRandomExercise();
+        }, 1200);
+      }
       return false;
     }
   };
 
   // Funkcja do automatycznego wykonywania ruchów startowych
-  const autoPlayStartingMoves = useCallback((exercise: Exercise, maxMoves: number) => {
+  const autoPlayStartingMoves = useCallback((exercise: Exercise, maxFullMoves: number) => {
     const chess = new Chess(exercise.initialFen);
     let idx = 0;
+    let fullMoves = 0;
     while (
       idx < exercise.analysis.length &&
-      (maxMoves === 0 || idx < maxMoves)
+      (maxFullMoves === 0 || fullMoves < maxFullMoves)
     ) {
       const move = exercise.analysis[idx]?.move;
       if (!move || ["0-1", "1-0", "*", "½-½"].includes(move)) break;
       chess.move(move);
       idx++;
+      if (idx % 2 === 0) fullMoves++;
     }
     // Sprawdź, czy na ruchu jest gracz (czyli użytkownik)
-    // Gracz to ten, kto zaczyna ćwiczenie (white, chyba że boardOrientation=black)
     let userColor: 'w' | 'b' = 'w';
     if (exercise.id === 'KID-black') userColor = 'b';
     if (chess.turn() !== userColor && idx < exercise.analysis.length) {
-      // Wykonaj jeszcze jeden ruch, żeby na ruchu był gracz
       const move = exercise.analysis[idx]?.move;
       if (move && !["0-1", "1-0", "*", "½-½"].includes(move)) {
         chess.move(move);
@@ -292,17 +249,24 @@ const TrainingPage: NextPage = () => {
     }
     setGame(chess);
     setCurrentMoveIndex(idx);
+    setAutoStartMoveIndex(idx);
+    setStartBoardMoveNumber(Math.floor(idx / 2) + 1);
   }, []);
 
   const loadExercise = (exercise: Exercise) => {
     setCurrentExercise(exercise);
     setGame(new Chess(exercise.initialFen));
     setCurrentMoveIndex(0);
+    setAutoStartMoveIndex(0);
+    setStartBoardMoveNumber(1);
     setShowSolution(false);
     setIsCorrect(null);
     setUserAnswer("");
     setScore(0);
     setTotalMoves(exercise.analysis.length);
+    setShowMistakes(false);
+    setMistakes([]);
+    setIsRandomMode(false);
     // Ustaw orientację szachownicy
     if (exercise.id === 'KID-black') {
       setBoardOrientation('black');
@@ -313,17 +277,18 @@ const TrainingPage: NextPage = () => {
         chess.move(firstMove);
         setGame(chess);
         setCurrentMoveIndex(1);
+        setAutoStartMoveIndex(1);
+        setStartBoardMoveNumber(1);
       }
     } else {
       setBoardOrientation('white');
       // Automatyczne ruchy startowe (jeśli wybrano)
       if (autoStartingMoves) {
         const movesLimitNum = parseInt(autoMovesLimit);
-        // Liczba pełnych ruchów (par: białe+czarne) -> liczba półruchów = movesLimitNum * 2
-        const maxMovesNum = !isNaN(movesLimitNum) && movesLimitNum > 0 ? movesLimitNum * 2 : 0;
+        const maxFullMovesNum = !isNaN(movesLimitNum) && movesLimitNum > 0 ? movesLimitNum : 0;
         autoPlayStartingMoves(
           exercise,
-          maxMovesNum
+          maxFullMovesNum
         );
         return;
       }
@@ -333,6 +298,7 @@ const TrainingPage: NextPage = () => {
   const loadRandomExercise = () => {
     if (exercises.length > 0) {
       const randomIndex = Math.floor(Math.random() * exercises.length);
+      setIsRandomMode(true);
       loadExercise(exercises[randomIndex]);
     }
   };
@@ -424,7 +390,6 @@ const TrainingPage: NextPage = () => {
                 currentExercise={currentExercise}
                 onSelect={loadExercise}
                 onRandom={loadRandomExercise}
-                exerciseStats={{}}
               />
 
               {/* Środkowa kolumna - Szachownica */}

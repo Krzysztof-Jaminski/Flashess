@@ -93,7 +93,7 @@ const TrainingContainer: React.FC = () => {
     }
     if (!currentExercise) return false;
     // Jeśli ustawiono userMaxMoves, nie pozwól na dalsze ruchy po osiągnięciu limitu
-    const maxMovesNum = parseInt(userMaxMoves);
+    const maxMovesNum = parseInt(userMaxMoves) * 2;
     if (!isNaN(maxMovesNum) && maxMovesNum > 0 && currentMoveIndex >= maxMovesNum) {
       setShowMistakes(true);
       return false;
