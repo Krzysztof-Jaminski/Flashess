@@ -33,7 +33,56 @@ const CreationPage: NextPage = () => {
   const [isStockfishMode, setIsStockfishMode] = useState(false);
   const [stockfishMoves, setStockfishMoves] = useState<string[]>([]);
   const [exerciseName, setExerciseName] = useState("");
+  const [customPGN, setCustomPGN] = useState("");
+  const [customColor, setCustomColor] = useState<'white'|'black'>('white');
+  const [customError, setCustomError] = useState<string>("");
+  const [historyIndex, setHistoryIndex] = useState<number | null>(null);
+  const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const boardRef = useRef<any>(null);
+
+  // Apply settings automatically when they change
+  useEffect(() => {
+    // Only reset if there's no PGN loaded and we're changing from a state with PGN
+    if (!customPGN.trim() && moveHistory.length === 0) {
+      setGame(new Chess());
+      setAnalysis([]);
+      setMoveHistory([]);
+      setHistoryIndex(null);
+      fetchPopularMoves(new Chess().fen());
+    }
+  }, [customColor]);
+
+  // Handle arrow keys for move history
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle arrow keys if we have move history
+      if (moveHistory.length === 0) return;
+      
+      if (e.key === "ArrowLeft") {
+        if (historyIndex !== null && historyIndex > 0) {
+          goToHistoryIndex(historyIndex - 1);
+        }
+      } else if (e.key === "ArrowRight") {
+        if (historyIndex !== null && historyIndex < moveHistory.length) {
+          goToHistoryIndex(historyIndex + 1);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [historyIndex, moveHistory]);
+
+  // Function to go to specific history index
+  const goToHistoryIndex = (idx: number) => {
+    const chess = new Chess();
+    for (let i = 0; i < idx; i++) {
+      const move = moveHistory[i];
+      if (!move) break;
+      chess.move(move);
+    }
+    setGame(chess);
+    setHistoryIndex(idx);
+  };
 
   const fetchPopularMoves = async (fen: string) => {
     try {
@@ -154,6 +203,10 @@ const CreationPage: NextPage = () => {
     newGame.move({ from: selected.from, to: selected.to, promotion: "q" });
     setGame(newGame);
 
+    // Add to move history
+    setMoveHistory(prev => [...prev, move]);
+    setHistoryIndex(moveHistory.length);
+
     const evaluation = await checkPositionEvaluation(newGame.fen());
     const isCritical = Math.abs(evaluation) >= criticalThreshold;
 
@@ -179,6 +232,14 @@ const CreationPage: NextPage = () => {
   };
 
   const handlePieceDrop = (sourceSquare: Square, targetSquare: Square) => {
+    // Check if move is legal before attempting it
+    const legalMoves = game.moves({ verbose: true });
+    const isLegal = legalMoves.some(m => m.from === sourceSquare && m.to === targetSquare);
+    
+    if (!isLegal) {
+      return false; // Don't allow illegal moves
+    }
+
     const move = {
       from: sourceSquare,
       to: targetSquare,
@@ -201,19 +262,191 @@ const CreationPage: NextPage = () => {
     }
 
     setGame(newGame);
+    
+    // Add to move history
+    setMoveHistory(prev => [...prev, algebraicMove]);
+    setHistoryIndex(moveHistory.length);
+    
     fetchPopularMoves(newGame.fen());
     return true;
   };
 
-  const handleClearBoard = () => {
-    setGame(new Chess());
-    setAnalysis([]);
-    setPopularMoves([]);
-    setSelectedMove(null);
-    setBoardHighlight("");
-    setIsStockfishMode(false);
-    setStockfishMoves([]);
-    fetchPopularMoves(new Chess().fen());
+  const handleAddCustomExercise = () => {
+    setCustomError("");
+    // Walidacja: PGN musi zaczynać się od pozycji startowej
+    const pgn = customPGN.trim();
+    if (!/^1\./.test(pgn)) {
+      setCustomError("PGN musi zaczynać się od pozycji startowej (np. 1. e4 ...)");
+      return;
+    }
+    // Walidacja: nazwa ćwiczenia
+    const name = exerciseName.trim();
+    if (!name) {
+      setCustomError("Wprowadź nazwę ćwiczenia");
+      return;
+    }
+    // Spróbuj sparsować PGN
+    let chess;
+    try {
+      chess = new Chess();
+      chess.loadPgn(pgn);
+    } catch (e) {
+      setCustomError("Nieprawidłowy PGN: " + (e as Error).message);
+      return;
+    }
+    // Zapisz do localStorage
+    const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
+    const newExercise = {
+      id: 'custom-' + Date.now(),
+      name: name,
+      initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', // Proper FEN for starting position
+      pgn,
+      color: customColor,
+      createdAt: new Date().toISOString(),
+    };
+    customExercises.push(newExercise);
+    localStorage.setItem('customExercises', JSON.stringify(customExercises));
+    setCustomPGN("");
+    setExerciseName("");
+    setCustomError("Dodano do Twoich ćwiczeń!");
+    // Refresh the custom exercises list
+    setCustomExercises(customExercises);
+  };
+
+  // Function to add current board history as exercise
+  const handleAddCurrentHistory = () => {
+    setCustomError("");
+    
+    if (moveHistory.length === 0) {
+      setCustomError("Brak historii ruchów do zapisania");
+      return;
+    }
+
+    // Walidacja: nazwa ćwiczenia
+    const name = exerciseName.trim();
+    if (!name) {
+      setCustomError("Wprowadź nazwę ćwiczenia");
+      return;
+    }
+
+    // Generuj PGN bez nagłówków - tylko ruchy
+    const cleanPgn = moveHistory.join(" ");
+
+    // Zapisz do localStorage
+    const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
+    const newExercise = {
+      id: 'custom-' + Date.now(),
+      name: name,
+      initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', // Proper FEN for starting position
+      pgn: cleanPgn,
+      color: customColor,
+      createdAt: new Date().toISOString(),
+    };
+    customExercises.push(newExercise);
+    localStorage.setItem('customExercises', JSON.stringify(customExercises));
+    setExerciseName("");
+    setCustomError("Aktualna pozycja dodana do Twoich ćwiczeń!");
+    // Refresh the custom exercises list
+    setCustomExercises(customExercises);
+  };
+
+  // Function to preview PGN on the board
+  const previewPGN = () => {
+    const pgn = customPGN.trim();
+    if (!pgn || !/^1\./.test(pgn)) return;
+    
+    try {
+      const chess = new Chess();
+      chess.loadPgn(pgn);
+      setGame(chess);
+      setMoveHistory(chess.history());
+      setHistoryIndex(chess.history().length);
+      setCustomError("");
+    } catch (e) {
+      setCustomError("Invalid PGN format");
+    }
+  };
+
+  // Function to load exercise back to board
+  const loadExerciseToBoard = (exercise: any) => {
+    try {
+      const chess = new Chess();
+      if (exercise.pgn) {
+        chess.loadPgn(exercise.pgn);
+      }
+      setGame(chess);
+      setMoveHistory(chess.history());
+      setHistoryIndex(chess.history().length);
+      setCustomPGN(exercise.pgn || "");
+      setCustomColor(exercise.color || 'white');
+      setCustomError("");
+      fetchPopularMoves(chess.fen());
+    } catch (e) {
+      setCustomError("Error loading exercise: " + (e as Error).message);
+    }
+  };
+
+  // Function to delete custom exercise
+  const deleteCustomExercise = (exerciseId: string) => {
+    const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
+    const filtered = customExercises.filter((ex: any) => ex.id !== exerciseId);
+    localStorage.setItem('customExercises', JSON.stringify(filtered));
+    setCustomError("Exercise deleted!");
+    // Refresh the custom exercises list
+    setCustomExercises(filtered);
+  };
+
+  // Load custom exercises for display
+  const [customExercises, setCustomExercises] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadCustomExercises = () => {
+      try {
+        const exercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
+        setCustomExercises(exercises);
+      } catch (e) {
+        setCustomExercises([]);
+      }
+    };
+    loadCustomExercises();
+  }, []);
+
+  // Auto-preview PGN when it changes
+  useEffect(() => {
+    if (customPGN.trim()) {
+      previewPGN();
+    }
+  }, [customPGN]);
+
+  // Render move history
+  const renderMoveHistory = () => {
+    if (moveHistory.length === 0) {
+      return (
+        <div className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-4 text-xs text-white/60">
+          No moves played yet
+        </div>
+      );
+    }
+
+    let out: string[] = [];
+    for (let i = 0; i < moveHistory.length; i += 2) {
+      const num = Math.floor(i / 2) + 1;
+      const white = moveHistory[i] || "";
+      const black = moveHistory[i + 1] || "";
+      out.push(`${num}. ${white} ${black}`.trim());
+    }
+
+    return (
+      <div className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-4 text-xs text-white/80 max-h-64 overflow-y-auto custom-scrollbar">
+        <div className="font-bold mb-1">Move History</div>
+        <div className="flex flex-wrap gap-x-3 gap-y-1">
+          {out.map((line, idx) => (
+            <span key={idx} className={historyIndex !== null && Math.floor(historyIndex/2) === idx ? "text-cyan-400 font-bold" : ""}>{line}</span>
+          ))}
+        </div>
+        <div className="mt-1 text-white/50 text-xs">Use ←/→ arrows to browse history</div>
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -230,161 +463,177 @@ const CreationPage: NextPage = () => {
   }, []);
 
   return (
-    <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col">
+    <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[5%] -left-[30%] w-[50rem] h-[45rem] rounded-full bg-[rgba(36,245,228,0.18)] blur-[120px]" />
-        <div className="absolute top-[-5%] right-[-10%] w-[42rem] h-[42rem] rounded-full bg-[rgba(36,245,228,0.08)] blur-[100px]" />
-        <div className="absolute top-[22%] right-[-15%] w-[35rem] h-[35rem] rounded-full bg-[rgba(36,245,228,0.15)] blur-[100px]" />
+        <div className="absolute top-[10%] -left-[20%] w-[40rem] h-[40rem] rounded-full bg-[rgba(36,245,228,0.18)] blur-[120px]" />
+        <div className="absolute top-[60%] right-[-15%] w-[30rem] h-[30rem] rounded-full bg-[rgba(36,245,228,0.08)] blur-[100px]" />
+        <div className="absolute top-[30%] left-[60%] w-[25rem] h-[25rem] rounded-full bg-[rgba(36,245,228,0.15)] blur-[100px]" />
       </div>
-
-      <main className="w-full flex flex-col gap-[5rem] text-left text-[0.938rem] text-White font-['Russo_One']">
-        <TopBar />
-
-        <div className="w-full px-1">
-          <div className="flex flex-row gap-4 max-w-[1400px] mx-auto">
-            {/* Analiza */}
-            <div className="w-[300px] bg-white/5 border border-white/30 rounded-lg p-4">
-              <h3 className="text-lg text-cyan-300 mb-3">Analysis</h3>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {analysis.map((move, index) => (
-                  <div
-                    key={index}
-                    className={`p-2 rounded ${
-                      move.isCritical
-                        ? "bg-red-500/20 border border-red-500/50"
-                        : "bg-white/10"
-                    }`}
-                  >
-                    <div className="text-sm font-bold">
-                      {index + 1}. {move.move}
-                    </div>
-                    <div className="text-xs text-white/70">
-                      Eval: {move.evaluation.toFixed(2)}
-                    </div>
-                    {move.isCritical && (
-                      <div className="text-xs text-red-400">
-                        Critical position!
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {analysis.length === 0 && (
-                  <div className="text-white/50 text-sm">
-                    No moves analyzed yet
-                  </div>
-                )}
-              </div>
-
-              {analysis.length > 0 && (
-                <div className="mt-4 space-y-2">
+      <main className="w-full flex flex-col !pt-[0rem] !pb-[2rem] !pl-[0rem] !pr-[0rem] box-border gap-[0.5rem] max-w-full mq1225:!pb-[2rem] mq1225:box-border mq450:gap-[0.3rem] mq450:!pb-[1rem] mq450:box-border mq1525:h-auto">
+        <main className="w-full flex flex-col gap-[0.7rem] max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-[0.5rem] mq450:gap-[0.2rem]">
+          <div className="w-full">
+            <TopBar />
+          </div>
+          <div className="w-full px-1 mt-[-0.5rem]">
+            <div className="flex flex-row gap-4 max-w-[1400px] mx-auto items-start">
+              {/* Left: Add custom exercise */}
+              <div className="w-[300px] bg-white/5 border border-white/30 rounded-lg p-4 mb-6 mt-8">
+                <h3 className="text-lg text-cyan-300 mb-3">Add your own exercise</h3>
+                
+                {/* Exercise Name Input */}
+                <div className="mb-3">
                   <input
-                    type="text"
                     value={exerciseName}
-                    onChange={(e) => setExerciseName(e.target.value)}
+                    onChange={e => setExerciseName(e.target.value)}
                     placeholder="Exercise name"
-                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm"
+                    className="w-full h-8 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm"
                   />
+                </div>
+
+                {/* PGN Input - smaller size */}
+                <div className="h-16 mb-3">
+                  <textarea
+                    value={customPGN}
+                    onChange={e => setCustomPGN(e.target.value)}
+                    placeholder="Paste your PGN here (optional)"
+                    className="w-full h-12 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs mb-2"
+                  />
+                </div>
+
+                <div className="flex items-center gap-4 mb-3">
+                  <label className="text-white/80 text-sm">Training color:</label>
+                  <label className="flex items-center gap-1">
+                    <input type="radio" checked={customColor==='white'} onChange={()=>setCustomColor('white')} />
+                    <span>White</span>
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input type="radio" checked={customColor==='black'} onChange={()=>setCustomColor('black')} />
+                    <span>Black</span>
+                  </label>
+                </div>
+
+                {/* Two buttons for adding exercises */}
+                <div className="flex flex-col gap-2 mb-3">
                   <Buttons
-                    bUTTON="Save Exercise"
-                    onLogInButtonContainerClick={saveExercise}
+                    bUTTON="Add PGN Exercise"
+                    onLogInButtonContainerClick={handleAddCustomExercise}
                     className="w-full !py-2 text-sm"
                   />
-                </div>
-              )}
-            </div>
-
-            {/* Szachownica */}
-            <div className="flex-1 bg-white/5 border border-white/30 rounded-lg p-4 flex flex-col items-start justify-end">
-              <div className="w-full aspect-square max-w-[480px] mt-10 ml-0" style={{ alignSelf: 'flex-start' }}>
-                <div
-                  className="w-full h-full flex items-center justify-center"
-                  style={{
-                    border: boardHighlight
-                      ? `3px solid ${boardHighlight}`
-                      : "none",
-                    borderRadius: "8px",
-                    transition: "border 0.3s ease",
-                  }}
-                >
-                  <Chessboard
-                    ref={boardRef}
-                    position={game.fen()}
-                    boardWidth={boardWidth}
-                    onPieceDrop={handlePieceDrop}
-                    customBoardStyle={{
-                      borderRadius: "4px",
-                      boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
-                      width: "100%",
-                      height: "100%",
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-center gap-2 mt-4">
-                <Buttons
-                  bUTTON="Clear Board"
-                  onLogInButtonContainerClick={handleClearBoard}
-                  className="!py-1 !px-3 text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Opening Tree */}
-            <div className="w-[300px] bg-white/5 border border-white/30 rounded-lg p-4">
-              <h3 className="text-lg text-cyan-300 mb-3">Opening Tree</h3>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 mb-3">
-                  <label className="text-white/80 text-sm">
-                    Critical threshold:
-                  </label>
-                  <input
-                    type="number"
-                    value={criticalThreshold}
-                    onChange={(e) =>
-                      setCriticalThreshold(parseFloat(e.target.value))
-                    }
-                    step="0.1"
-                    min="0"
-                    className="w-16 bg-white/10 border border-white/20 rounded px-1 py-1 text-white text-sm"
+                  <Buttons
+                    bUTTON="Add Current Position"
+                    onLogInButtonContainerClick={handleAddCurrentHistory}
+                    className="w-full !py-2 text-sm bg-green-600/20 border-green-600/50 hover:bg-green-600/30"
                   />
                 </div>
 
-                {popularMoves.map((move, index) => (
-                  <div
-                    key={index}
-                    className={`p-2 rounded cursor-pointer transition-colors ${
-                      selectedMove === move.move
-                        ? "bg-cyan-400/30 border border-cyan-400/50"
-                        : "bg-white/10 hover:bg-white/15"
-                    }`}
-                    onClick={() => handleMoveSelect(move.move)}
-                  >
-                    <div className="text-sm font-bold">{move.move}</div>
-                    <div className="text-xs text-white/70">
-                      Win: {move.winRate}% | Draw: {move.drawRate}% | Loss:{" "}
-                      {move.lossRate}%
-                    </div>
-                    <div className="text-xs text-white/60">
-                      Eval: {move.evaluation.toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-
-                {isStockfishMode && (
-                  <div className="mt-4 p-2 bg-blue-500/20 border border-blue-500/50 rounded">
-                    <div className="text-sm text-blue-300 font-bold">
-                      Stockfish Mode Active
-                    </div>
-                    <div className="text-xs text-blue-200">
-                      Playing best moves...
+                {customError && <div className="mt-2 text-xs text-red-400">{customError}</div>}
+                
+                {/* Move History - moved to left panel */}
+                {renderMoveHistory()}
+                
+                {/* Custom Exercises List */}
+                {customExercises.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-md text-cyan-300 mb-2">Your Custom Exercises</h4>
+                    <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+                      {customExercises.map((exercise) => (
+                        <div key={exercise.id} className="flex items-center justify-between p-2 bg-white/5 rounded border border-white/10">
+                          <div 
+                            className="flex-1 cursor-pointer hover:bg-white/10 transition-colors p-1 rounded"
+                            onClick={() => loadExerciseToBoard(exercise)}
+                          >
+                            <div className="text-sm font-bold text-white">{exercise.name}</div>
+                            <div className="text-xs text-white/60">{exercise.color} to play</div>
+                          </div>
+                          <button
+                            onClick={() => deleteCustomExercise(exercise.id)}
+                            className="ml-2 px-2 py-1 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-xs hover:bg-red-500/30 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
+              </div>
+              {/* Center: Chessboard (identycznie jak w TrainingBoard) */}
+              <div className="flex-1 border rounded-lg p-4 flex flex-col items-center" style={{ justifyContent: 'flex-start', background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.3)' }}>
+                <div
+                  className="aspect-square mt-0"
+                  style={{ width: 700, height: 700, minWidth: 700, minHeight: 700, maxWidth: 700, maxHeight: 700 }}
+                >
+                  <div className={`w-full h-full flex items-center justify-center${boardHighlight === 'red' ? ' ring-4' : ''}`}
+                    style={boardHighlight === 'red' ? { boxShadow: '0 0 0 4px var(--red-55)' } : {}}>
+                    <Chessboard
+                      position={game.fen()}
+                      boardWidth={700}
+                      onPieceDrop={handlePieceDrop}
+                      boardOrientation={customColor}
+                      customBoardStyle={{
+                        borderRadius: "4px",
+                        boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
+                        width: 700,
+                        height: 700
+                      }}
+                      customArrowColor="var(--blue-84)"
+                    />
+                  </div>
+                </div>
+              </div>
+              {/* Right: Opening Tree with move history */}
+              <div className="w-[300px] bg-white/5 border border-white/30 rounded-lg p-4 mt-8">
+                <h3 className="text-lg text-cyan-300 mb-3">Opening Tree</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <label className="text-white/80 text-sm">
+                      Critical threshold:
+                    </label>
+                    <input
+                      type="number"
+                      value={criticalThreshold}
+                      onChange={(e) =>
+                        setCriticalThreshold(parseFloat(e.target.value))
+                      }
+                      step="0.1"
+                      min="0"
+                      className="w-16 bg-white/10 border border-white/20 rounded px-1 py-1 text-white text-sm"
+                    />
+                  </div>
+                  {popularMoves.map((move, index) => (
+                    <div
+                      key={index}
+                      className={`p-2 rounded cursor-pointer transition-colors ${
+                        selectedMove === move.move
+                          ? "bg-cyan-400/30 border border-cyan-400/50"
+                          : "bg-white/10 hover:bg-white/15"
+                      }`}
+                      onClick={() => handleMoveSelect(move.move)}
+                    >
+                      <div className="text-sm font-bold">{move.move}</div>
+                      <div className="text-xs text-white/70">
+                        Win: {move.winRate}% | Draw: {move.drawRate}% | Loss: {move.lossRate}%
+                      </div>
+                      <div className="text-xs text-white/60">
+                        Eval: {move.evaluation.toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                  {isStockfishMode && (
+                    <div className="mt-4 p-2 bg-blue-500/20 border border-blue-500/50 rounded">
+                      <div className="text-sm text-blue-300 font-bold">
+                        Stockfish Mode Active
+                      </div>
+                      <div className="text-xs text-blue-200">
+                        Playing best moves...
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </main>
       </main>
     </div>
   );

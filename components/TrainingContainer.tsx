@@ -29,16 +29,6 @@ const TrainingContainer: React.FC = () => {
   const [historyIndex, setHistoryIndex] = useState<number | null>(null);
   const [preHistoryTrainingIndex, setPreHistoryTrainingIndex] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [exerciseStats, setExerciseStats] = useState<{ [id: string]: { total: number; perfect: number } }>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        return JSON.parse(localStorage.getItem("exerciseStats") || "{}") || {};
-      } catch {
-        return {};
-      }
-    }
-    return {};
-  });
   const boardRef = useRef<any>(null);
 
   // Pobieranie ćwiczeń z API
@@ -283,23 +273,6 @@ const TrainingContainer: React.FC = () => {
     fetchExercises();
   }, []);
 
-  useEffect(() => {
-    if (!currentExercise || !showMistakes) return;
-    setExerciseStats(prev => {
-      const prevStats = prev[currentExercise.id] || { total: 0, perfect: 0 };
-      const newStats = {
-        total: prevStats.total + 1,
-        perfect: mistakes.length === 0 ? prevStats.perfect + 1 : prevStats.perfect
-      };
-      const updated = { ...prev, [currentExercise.id]: newStats };
-      if (typeof window !== "undefined") {
-        localStorage.setItem("exerciseStats", JSON.stringify(updated));
-      }
-      return updated;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showMistakes]);
-
   return (
     <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -320,7 +293,6 @@ const TrainingContainer: React.FC = () => {
                 currentExercise={currentExercise}
                 onSelect={loadExercise}
                 onRandom={loadRandomExercise}
-                exerciseStats={exerciseStats}
               />
               <TrainingBoard
                 game={game}

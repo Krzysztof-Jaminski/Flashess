@@ -239,7 +239,7 @@ const TrainingPage: NextPage = () => {
     }
     // Sprawdź, czy na ruchu jest gracz (czyli użytkownik)
     let userColor: 'w' | 'b' = 'w';
-    if (exercise.id === 'KID-black') userColor = 'b';
+    if (exercise.color === 'black' || exercise.id === 'KID-black') userColor = 'b';
     if (chess.turn() !== userColor && idx < exercise.analysis.length) {
       const move = exercise.analysis[idx]?.move;
       if (move && !["0-1", "1-0", "*", "½-½"].includes(move)) {
@@ -267,13 +267,14 @@ const TrainingPage: NextPage = () => {
     setShowMistakes(false);
     setMistakes([]);
     setIsRandomMode(false);
-    // Ustaw orientację szachownicy
-    if (exercise.id === 'KID-black') {
+    
+    // Ustaw orientację szachownicy na podstawie ćwiczenia
+    if (exercise.color === 'black' || exercise.id === 'KID-black') {
       setBoardOrientation('black');
       // Automatycznie wykonaj pierwszy ruch białych
       const chess = new Chess(exercise.initialFen);
       const firstMove = exercise.analysis[0]?.move;
-      if (firstMove) {
+      if (firstMove && !["0-1", "1-0", "*", "½-½"].includes(firstMove)) {
         chess.move(firstMove);
         setGame(chess);
         setCurrentMoveIndex(1);
