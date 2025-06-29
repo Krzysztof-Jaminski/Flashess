@@ -3,6 +3,7 @@ import Buttons from "./buttons";
 import { Chess } from "chess.js";
 import { Exercise } from "../utils/exercises";
 import MoveHistory from "./MoveHistory";
+import AppNumberInput from "./AppNumberInput";
 
 interface RightPanelProps {
   userMaxMoves: string;
@@ -24,6 +25,7 @@ interface RightPanelProps {
   setShowHistory: (v: boolean) => void;
   historyIndex: number | null;
   currentMoveIndex: number;
+  onGoToMove?: (moveIdx: number) => void;
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({
@@ -45,7 +47,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
   showHistory,
   setShowHistory,
   historyIndex,
-  currentMoveIndex
+  currentMoveIndex,
+  onGoToMove
 }) => {
   const [startBoardMoveNumber, setStartBoardMoveNumber] = useState(1);
 
@@ -53,14 +56,12 @@ const RightPanel: React.FC<RightPanelProps> = ({
     <div className="w-[300px] h-full border rounded-lg p-4 flex flex-col" style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'var(--blue-84)' }}>
       <div className="mb-4">
         <label htmlFor="maxMovesInput" className="block text-white/80 text-sm mb-1">Moves limit (0 = until the end):</label>
-        <input
-          id="maxMovesInput"
-          type="number"
-          min={0}
+        <AppNumberInput
           value={userMaxMoves}
-          onChange={e => setUserMaxMoves(e.target.value)}
+          onChange={setUserMaxMoves}
+          min={0}
           placeholder="e.g. 20"
-          className="max-w-[90px] bg-[rgba(255,255,255,0.1)] border border-[var(--blue-84)] rounded px-2 py-1 text-white text-sm mb-2"
+          className="max-w-[90px] mb-2"
         />
       </div>
       <div className="mb-4 flex items-center gap-2">
@@ -74,14 +75,13 @@ const RightPanel: React.FC<RightPanelProps> = ({
       {autoStartingMoves && (
         <div className="mb-4">
           <label htmlFor="autoMovesLimit" className="block text-white/80 text-sm mb-1">Automatic moves up to move:</label>
-          <input
-            id="autoMovesLimit"
-            type="number"
-            min={0}
+          <AppNumberInput
             value={autoMovesLimit}
-            onChange={e => setAutoMovesLimit(e.target.value)}
+            onChange={setAutoMovesLimit}
+            min={0}
+            max={parseInt(userMaxMoves) || undefined}
             placeholder="e.g. 3"
-            className="max-w-[90px] bg-[rgba(255,255,255,0.1)] border border-[var(--blue-84)] rounded px-2 py-1 text-white text-sm mb-2"
+            className="max-w-[90px] mb-2"
           />
         </div>
       )}
@@ -135,6 +135,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
           setShowHistory={setShowHistory}
           historyIndex={historyIndex}
           currentMoveIndex={currentMoveIndex}
+          onGoToMove={onGoToMove}
         />
       </div>
     </div>

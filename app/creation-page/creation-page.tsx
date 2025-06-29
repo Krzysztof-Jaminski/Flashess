@@ -7,6 +7,7 @@ import TopBar from "../../components/topbar";
 import Buttons from "../../components/buttons";
 import type { Square } from "chess.js";
 import { API_BASE_URL } from "../../utils/apiConfig";
+import AppNumberInput from "../../components/AppNumberInput";
 
 interface PopularMove {
   move: string;
@@ -20,6 +21,19 @@ interface AnalysisMove {
   move: string;
   evaluation: number;
   isCritical: boolean;
+}
+
+function getRandomPopularMoves() {
+  const moves = ["e4", "d4", "Nf3", "c4", "g3", "Nc3", "b3", "f4", "b4", "e3", "d3", "h3", "a3"];
+  const n = Math.floor(Math.random() * 4) + 3;
+  const shuffled = moves.sort(() => 0.5 - Math.random());
+  return Array.from({ length: n }).map((_, i) => ({
+    move: shuffled[i],
+    winRate: Math.floor(Math.random() * 50) + 25,
+    drawRate: Math.floor(Math.random() * 30) + 10,
+    lossRate: Math.floor(Math.random() * 30),
+    evaluation: (Math.random() * 2 - 1),
+  }));
 }
 
 const CreationPage: NextPage = () => {
@@ -276,13 +290,7 @@ const CreationPage: NextPage = () => {
     // Walidacja: PGN musi zaczynać się od pozycji startowej
     const pgn = customPGN.trim();
     if (!/^1\./.test(pgn)) {
-      setCustomError("PGN musi zaczynać się od pozycji startowej (np. 1. e4 ...)");
-      return;
-    }
-    // Walidacja: nazwa ćwiczenia
-    const name = exerciseName.trim();
-    if (!name) {
-      setCustomError("Wprowadź nazwę ćwiczenia");
+      setCustomError("");
       return;
     }
     // Spróbuj sparsować PGN
@@ -291,14 +299,14 @@ const CreationPage: NextPage = () => {
       chess = new Chess();
       chess.loadPgn(pgn);
     } catch (e) {
-      setCustomError("Nieprawidłowy PGN: " + (e as Error).message);
+      setCustomError("");
       return;
     }
     // Zapisz do localStorage
     const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
     const newExercise = {
       id: 'custom-' + Date.now(),
-      name: name,
+      name: exerciseName.trim(),
       initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', // Proper FEN for starting position
       pgn,
       color: customColor,
@@ -308,7 +316,6 @@ const CreationPage: NextPage = () => {
     localStorage.setItem('customExercises', JSON.stringify(customExercises));
     setCustomPGN("");
     setExerciseName("");
-    setCustomError("Dodano do Twoich ćwiczeń!");
     // Refresh the custom exercises list
     setCustomExercises(customExercises);
   };
@@ -318,14 +325,7 @@ const CreationPage: NextPage = () => {
     setCustomError("");
     
     if (moveHistory.length === 0) {
-      setCustomError("Brak historii ruchów do zapisania");
-      return;
-    }
-
-    // Walidacja: nazwa ćwiczenia
-    const name = exerciseName.trim();
-    if (!name) {
-      setCustomError("Wprowadź nazwę ćwiczenia");
+      setCustomError("");
       return;
     }
 
@@ -336,7 +336,7 @@ const CreationPage: NextPage = () => {
     const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
     const newExercise = {
       id: 'custom-' + Date.now(),
-      name: name,
+      name: exerciseName.trim(),
       initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', // Proper FEN for starting position
       pgn: cleanPgn,
       color: customColor,
@@ -345,7 +345,6 @@ const CreationPage: NextPage = () => {
     customExercises.push(newExercise);
     localStorage.setItem('customExercises', JSON.stringify(customExercises));
     setExerciseName("");
-    setCustomError("Aktualna pozycja dodana do Twoich ćwiczeń!");
     // Refresh the custom exercises list
     setCustomExercises(customExercises);
   };
@@ -363,7 +362,7 @@ const CreationPage: NextPage = () => {
       setHistoryIndex(chess.history().length);
       setCustomError("");
     } catch (e) {
-      setCustomError("Invalid PGN format");
+      setCustomError("");
     }
   };
 
@@ -379,10 +378,9 @@ const CreationPage: NextPage = () => {
       setHistoryIndex(chess.history().length);
       setCustomPGN(exercise.pgn || "");
       setCustomColor(exercise.color || 'white');
-      setCustomError("");
       fetchPopularMoves(chess.fen());
     } catch (e) {
-      setCustomError("Error loading exercise: " + (e as Error).message);
+      setCustomError("");
     }
   };
 
@@ -391,7 +389,7 @@ const CreationPage: NextPage = () => {
     const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
     const filtered = customExercises.filter((ex: any) => ex.id !== exerciseId);
     localStorage.setItem('customExercises', JSON.stringify(filtered));
-    setCustomError("Exercise deleted!");
+    setCustomError("");
     // Refresh the custom exercises list
     setCustomExercises(filtered);
   };
@@ -420,31 +418,63 @@ const CreationPage: NextPage = () => {
 
   // Render move history
   const renderMoveHistory = () => {
-    if (moveHistory.length === 0) {
-      return (
-        <div className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-4 text-xs text-white/60">
-          No moves played yet
-        </div>
-      );
-    }
-
-    let out: string[] = [];
-    for (let i = 0; i < moveHistory.length; i += 2) {
-      const num = Math.floor(i / 2) + 1;
-      const white = moveHistory[i] || "";
-      const black = moveHistory[i + 1] || "";
-      out.push(`${num}. ${white} ${black}`.trim());
-    }
-
     return (
-      <div className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-4 text-xs text-white/80 max-h-64 overflow-y-auto custom-scrollbar">
-        <div className="font-bold mb-1">Move History</div>
-        <div className="flex flex-wrap gap-x-3 gap-y-1">
-          {out.map((line, idx) => (
-            <span key={idx} className={historyIndex !== null && Math.floor(historyIndex/2) === idx ? "text-cyan-400 font-bold" : ""}>{line}</span>
-          ))}
+      <div>
+        <div className="flex gap-2 mb-2">
+          <Buttons
+            bUTTON="Clear history"
+            className="!py-1 !px-3 !text-xs !rounded"
+            onLogInButtonContainerClick={() => {
+              setMoveHistory([]);
+              setAnalysis([]);
+              setHistoryIndex(null);
+              setGame(new Chess());
+            }}
+          />
+          <Buttons
+            bUTTON="Remove last move"
+            className="!py-1 !px-3 !text-xs !rounded"
+            onLogInButtonContainerClick={() => {
+              if (moveHistory.length === 0) return;
+              const newHistory = moveHistory.slice(0, -1);
+              setMoveHistory(newHistory);
+              setAnalysis(analysis.slice(0, -1));
+              const chess = new Chess();
+              for (let i = 0; i < newHistory.length; i++) {
+                chess.move(newHistory[i]);
+              }
+              setGame(chess);
+              setHistoryIndex(newHistory.length);
+            }}
+          />
         </div>
-        <div className="mt-1 text-white/50 text-xs">Use ←/→ arrows to browse history</div>
+        {/* Reszta historii jak dotychczas */}
+        {moveHistory.length === 0 ? (
+          <div className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-2 text-xs text-white/60">
+            No moves played yet
+          </div>
+        ) : (
+          (() => {
+            let out: string[] = [];
+            for (let i = 0; i < moveHistory.length; i += 2) {
+              const num = Math.floor(i / 2) + 1;
+              const white = moveHistory[i] || "";
+              const black = moveHistory[i + 1] || "";
+              out.push(`${num}. ${white} ${black}`.trim());
+            }
+            return (
+              <div className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-2 text-xs text-white/80 max-h-64 overflow-y-auto custom-scrollbar">
+                <div className="font-bold mb-1">Move History</div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  {out.map((line, idx) => (
+                    <span key={idx} className={historyIndex !== null && Math.floor(historyIndex/2) === idx ? "text-cyan-400 font-bold" : ""}>{line}</span>
+                  ))}
+                </div>
+                <div className="mt-1 text-white/50 text-xs">Use ←/→ arrows to browse history</div>
+              </div>
+            );
+          })()
+        )}
       </div>
     );
   };
@@ -461,6 +491,11 @@ const CreationPage: NextPage = () => {
   useEffect(() => {
     fetchPopularMoves(game.fen());
   }, []);
+
+  // Po każdej zmianie historii generuj losowe popularMoves
+  useEffect(() => {
+    setPopularMoves(getRandomPopularMoves());
+  }, [moveHistory]);
 
   return (
     <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
@@ -513,7 +548,7 @@ const CreationPage: NextPage = () => {
                 </div>
 
                 {/* Two buttons for adding exercises */}
-                <div className="flex flex-col gap-2 mb-3">
+                <div className="flex flex-col gap-4 mb-5 mt-2">
                   <Buttons
                     bUTTON="Add PGN Exercise"
                     onLogInButtonContainerClick={handleAddCustomExercise}
@@ -521,8 +556,8 @@ const CreationPage: NextPage = () => {
                   />
                   <Buttons
                     bUTTON="Add Current Position"
+                    className="w-full !py-2 text-sm"
                     onLogInButtonContainerClick={handleAddCurrentHistory}
-                    className="w-full !py-2 text-sm bg-green-600/20 border-green-600/50 hover:bg-green-600/30"
                   />
                 </div>
 
@@ -582,25 +617,22 @@ const CreationPage: NextPage = () => {
                 </div>
               </div>
               {/* Right: Opening Tree with move history */}
-              <div className="w-[300px] bg-white/5 border border-white/30 rounded-lg p-4 mt-8">
+              <div className="w-[370px] bg-white/5 border border-white/30 rounded-lg p-4 mt-8">
                 <h3 className="text-lg text-cyan-300 mb-3">Opening Tree</h3>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 mb-3">
                     <label className="text-white/80 text-sm">
                       Critical threshold:
                     </label>
-                    <input
-                      type="number"
-                      value={criticalThreshold}
-                      onChange={(e) =>
-                        setCriticalThreshold(parseFloat(e.target.value))
-                      }
-                      step="0.1"
-                      min="0"
-                      className="w-16 bg-white/10 border border-white/20 rounded px-1 py-1 text-white text-sm"
+                    <AppNumberInput
+                      value={criticalThreshold.toString()}
+                      onChange={v => setCriticalThreshold(parseFloat(v) || 0)}
+                      step={0.1}
+                      min={0}
+                      className="w-[70px]"
                     />
                   </div>
-                  {popularMoves.map((move, index) => (
+                  {(popularMoves.length >= 7 ? popularMoves.slice(0, 7) : [...popularMoves, ...getRandomPopularMoves().slice(0, 7 - popularMoves.length)]).map((move, index) => (
                     <div
                       key={index}
                       className={`p-2 rounded cursor-pointer transition-colors ${

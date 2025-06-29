@@ -142,6 +142,13 @@ const TrainingContainer: React.FC = () => {
       // Nielegalny ruch: po prostu nie pozwól wykonać
       return false;
     }
+    
+    // Sprawdź czy currentMoveIndex jest w granicach analizy
+    if (!currentExercise.analysis[currentMoveIndex]) {
+      console.warn('currentMoveIndex out of bounds:', currentMoveIndex, 'analysis length:', currentExercise.analysis.length);
+      return false;
+    }
+    
     const expectedMove = currentExercise.analysis[currentMoveIndex].move;
     if (moveSan.san === expectedMove) {
       setGame(new Chess(game.fen()));
@@ -190,7 +197,7 @@ const TrainingContainer: React.FC = () => {
     let idx = 0;
     while (
       idx < exercise.analysis.length &&
-      (maxMoves === 0 || idx < maxMoves)
+      idx < maxMoves
     ) {
       const move = exercise.analysis[idx]?.move;
       if (!move || ["0-1", "1-0", "*", "½-½"].includes(move)) break;
@@ -238,12 +245,16 @@ const TrainingContainer: React.FC = () => {
       // Automatyczne ruchy startowe (jeśli wybrano)
       if (autoStartingMoves) {
         const movesLimitNum = parseInt(autoMovesLimit);
-        // Liczba pełnych ruchów (par: białe+czarne) -> liczba półruchów = movesLimitNum * 2
-        const maxMovesNum = !isNaN(movesLimitNum) && movesLimitNum > 0 ? movesLimitNum * 2 : 0;
-        autoPlayStartingMoves(
-          exercise,
-          maxMovesNum
-        );
+        if (!isNaN(movesLimitNum) && movesLimitNum > 0) {
+          // Liczba pełnych ruchów (par: białe+czarne) -> liczba półruchów = movesLimitNum * 2
+          const maxMovesNum = movesLimitNum * 2;
+          autoPlayStartingMoves(
+            exercise,
+            maxMovesNum
+          );
+          return;
+        }
+        // Jeśli limit to 0, po prostu nie rób nic (pozycja początkowa już ustawiona)
         return;
       }
     }
@@ -261,11 +272,14 @@ const TrainingContainer: React.FC = () => {
   if (hintMode && currentExercise && currentMoveIndex < currentExercise.analysis.length) {
     const fen = game.fen();
     const chessTmp = new Chess(fen);
-    const moveSan = currentExercise.analysis[currentMoveIndex].move;
-    const legalMoves = chessTmp.moves({ verbose: true });
-    const correctMove = legalMoves.find((m) => m.san === moveSan);
-    if (correctMove) {
-      hintSquares[correctMove.from] = { background: 'rgba(36,245,228,0.5)' };
+    const currentAnalysis = currentExercise.analysis[currentMoveIndex];
+    if (currentAnalysis) {
+      const moveSan = currentAnalysis.move;
+      const legalMoves = chessTmp.moves({ verbose: true });
+      const correctMove = legalMoves.find((m) => m.san === moveSan);
+      if (correctMove) {
+        hintSquares[correctMove.from] = { background: 'rgba(36,245,228,0.5)' };
+      }
     }
   }
 

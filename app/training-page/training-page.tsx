@@ -100,6 +100,15 @@ const TrainingPage: NextPage = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentExercise, historyIndex, currentMoveIndex]);
 
+  const checkMovesLimit = (nextMoveNumber: number) => {
+    const movesLimitNum = parseInt(userMaxMoves) || 0;
+    if (movesLimitNum > 0 && nextMoveNumber > movesLimitNum) {
+      setShowMistakes(true);
+      return true;
+    }
+    return false;
+  };
+
   // Obsługa ruchu na szachownicy
   const onPieceDrop = (sourceSquare: string, targetSquare: string, piece?: string) => {
     if (historyIndex !== null && currentExercise) {
@@ -129,6 +138,10 @@ const TrainingPage: NextPage = () => {
         setBoardHighlight(null);
         // Wykonaj natychmiast ruch komputera
         const nextIdx = currentMoveIndex + 1;
+        let nextMoveNumber = startBoardMoveNumber;
+        if (nextIdx % 2 === 0) nextMoveNumber++;
+        setStartBoardMoveNumber(nextMoveNumber);
+        if (checkMovesLimit(nextMoveNumber)) return false;
         if (nextIdx < currentExercise.analysis.length) {
           const nextMove = currentExercise.analysis[nextIdx].move;
           // Jeśli nextMove to wynik partii, nie wykonuj ruchu
@@ -146,6 +159,9 @@ const TrainingPage: NextPage = () => {
           newGame.move(nextMove);
           setGame(newGame);
           setCurrentMoveIndex(nextIdx + 1);
+          if ((nextIdx + 1) % 2 === 0) nextMoveNumber++;
+          setStartBoardMoveNumber(nextMoveNumber);
+          if (checkMovesLimit(nextMoveNumber)) return false;
         } else {
           setShowMistakes(true);
         }
@@ -170,12 +186,21 @@ const TrainingPage: NextPage = () => {
       // Nielegalny ruch: po prostu nie pozwól wykonać
       return false;
     }
+    // Sprawdź czy currentMoveIndex jest w granicach analizy
+    if (!currentExercise.analysis[currentMoveIndex]) {
+      console.warn('currentMoveIndex out of bounds:', currentMoveIndex, 'analysis length:', currentExercise.analysis.length);
+      return false;
+    }
     const expectedMove = currentExercise.analysis[currentMoveIndex].move;
     if (moveSan.san === expectedMove) {
       setGame(new Chess(game.fen()));
       setCurrentMoveIndex((prev) => prev + 1);
       setIsCorrect(true);
       setBoardHighlight(null);
+      let nextMoveNumber = startBoardMoveNumber;
+      if ((currentMoveIndex + 1) % 2 === 0) nextMoveNumber++;
+      setStartBoardMoveNumber(nextMoveNumber);
+      if (checkMovesLimit(nextMoveNumber)) return false;
       // Ustawiam pendingComputerMove, żeby obsłużyć premove
       setPendingComputerMove("pending");
       setTimeout(() => {
@@ -197,6 +222,9 @@ const TrainingPage: NextPage = () => {
           newGame.move(nextMove);
           setGame(newGame);
           setCurrentMoveIndex(nextIdx + 1);
+          if ((nextIdx + 1) % 2 === 0) nextMoveNumber++;
+          setStartBoardMoveNumber(nextMoveNumber);
+          if (checkMovesLimit(nextMoveNumber)) return false;
         } else {
           setShowMistakes(true);
         }
@@ -224,12 +252,19 @@ const TrainingPage: NextPage = () => {
 
   // Funkcja do automatycznego wykonywania ruchów startowych
   const autoPlayStartingMoves = useCallback((exercise: Exercise, maxFullMoves: number) => {
+    if (maxFullMoves === 0) {
+      setGame(new Chess(exercise.initialFen));
+      setCurrentMoveIndex(0);
+      setAutoStartMoveIndex(0);
+      setStartBoardMoveNumber(1);
+      return;
+    }
     const chess = new Chess(exercise.initialFen);
     let idx = 0;
     let fullMoves = 0;
     while (
       idx < exercise.analysis.length &&
-      (maxFullMoves === 0 || fullMoves < maxFullMoves)
+      fullMoves < maxFullMoves
     ) {
       const move = exercise.analysis[idx]?.move;
       if (!move || ["0-1", "1-0", "*", "½-½"].includes(move)) break;
@@ -253,19 +288,27 @@ const TrainingPage: NextPage = () => {
     setStartBoardMoveNumber(Math.floor(idx / 2) + 1);
   }, []);
 
-  const loadExercise = (exercise: Exercise) => {
-    setCurrentExercise(exercise);
+  const resetSession = (exercise: Exercise) => {
     setGame(new Chess(exercise.initialFen));
     setCurrentMoveIndex(0);
-    setAutoStartMoveIndex(0);
-    setStartBoardMoveNumber(1);
-    setShowSolution(false);
-    setIsCorrect(null);
-    setUserAnswer("");
-    setScore(0);
-    setTotalMoves(exercise.analysis.length);
     setShowMistakes(false);
     setMistakes([]);
+    setStartBoardMoveNumber(1);
+    setIsCorrect(null);
+    setShowSolution(false);
+    setUserAnswer("");
+    setBoardHighlight(null);
+    setPendingComputerMove(null);
+    setHistoryIndex(null);
+    setPreHistoryTrainingIndex(null);
+    // ...dodaj inne stany, które chcesz wyzerować
+  };
+
+  const loadExercise = (exercise: Exercise) => {
+    setCurrentExercise(exercise);
+    resetSession(exercise);
+    setScore(0);
+    setTotalMoves(exercise.analysis.length);
     setIsRandomMode(false);
     
     // Ustaw orientację szachownicy na podstawie ćwiczenia
@@ -286,11 +329,14 @@ const TrainingPage: NextPage = () => {
       // Automatyczne ruchy startowe (jeśli wybrano)
       if (autoStartingMoves) {
         const movesLimitNum = parseInt(autoMovesLimit);
-        const maxFullMovesNum = !isNaN(movesLimitNum) && movesLimitNum > 0 ? movesLimitNum : 0;
-        autoPlayStartingMoves(
-          exercise,
-          maxFullMovesNum
-        );
+        if (!isNaN(movesLimitNum) && movesLimitNum > 0) {
+          autoPlayStartingMoves(
+            exercise,
+            movesLimitNum
+          );
+          return;
+        }
+        // Jeśli limit to 0, po prostu nie rób nic (pozycja początkowa już ustawiona przez resetSession)
         return;
       }
     }
@@ -314,61 +360,25 @@ const TrainingPage: NextPage = () => {
   if (hintMode && currentExercise && currentMoveIndex < currentExercise.analysis.length) {
     const fen = game.fen();
     const chessTmp = new Chess(fen);
-    const moveSan = currentExercise.analysis[currentMoveIndex].move;
-    const legalMoves = chessTmp.moves({ verbose: true });
-    const correctMove = legalMoves.find((m) => m.san === moveSan);
-    if (correctMove) {
-      hintSquares[correctMove.from] = { background: 'rgba(36,245,228,0.5)' };
+    const currentAnalysis = currentExercise.analysis[currentMoveIndex];
+    if (currentAnalysis) {
+      const moveSan = currentAnalysis.move;
+      const legalMoves = chessTmp.moves({ verbose: true });
+      const correctMove = legalMoves.find((m) => m.san === moveSan);
+      if (correctMove) {
+        hintSquares[correctMove.from] = { background: 'rgba(36,245,228,0.5)' };
+      }
     }
   }
-
-  // Renderowanie listy zagranych ruchów
-  const renderMoveList = () => {
-    if (!currentExercise) return null;
-    if (!showHistory) return (
-      <div className="flex items-center gap-2 mt-2 mb-1">
-        <Buttons
-          bUTTON={showHistory ? "ON" : "OFF"}
-          onLogInButtonContainerClick={() => setShowHistory(true)}
-          className={`!py-1 !px-3 !text-xs !rounded ${showHistory ? 'border-cyan-400 text-cyan-300' : ''}`}
-        />
-        {!showHistory && <span className="text-white/80 text-xs">Show history</span>}
-      </div>
-    );
-    const moves = currentExercise.analysis.map(a => a.move).filter(m => !["0-1", "1-0", "*", "½-½"].includes(m));
-    let out: string[] = [];
-    for (let i = 0; i < moves.length; i += 2) {
-      const num = Math.floor(i / 2) + 1;
-      const white = moves[i] || "";
-      const black = moves[i + 1] || "";
-      out.push(`${num}. ${white} ${black}`.trim());
-    }
-    return (
-      <div className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-2 text-xs text-white/80 max-h-64 overflow-y-auto custom-scrollbar">
-        <div className="font-bold mb-1 flex items-center justify-between">
-          <span>Move history</span>
-          <div className="flex items-center gap-2">
-            <Buttons
-              bUTTON={showHistory ? "ON" : "OFF"}
-              onLogInButtonContainerClick={() => setShowHistory(false)}
-              className={`!py-1 !px-3 !text-xs !rounded ${showHistory ? 'border-cyan-400 text-cyan-300' : ''}`}
-            />
-            <span className="text-white/80 text-xs">Show history</span>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-x-3 gap-y-1">
-          {out.map((line, idx) => (
-            <span key={idx} className={historyIndex !== null && Math.floor(historyIndex/2) === idx ? "text-cyan-400 font-bold" : ""}>{line}</span>
-          ))}
-        </div>
-        <div className="mt-1 text-white/50 text-xs">Use ←/→ arrows to browse history</div>
-      </div>
-    );
-  };
 
   useEffect(() => {
     fetchExercises();
   }, []);
+
+  useEffect(() => {
+    setShowMistakes(false);
+    setMistakes([]);
+  }, [currentExercise]);
 
   return (
     <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
@@ -426,6 +436,11 @@ const TrainingPage: NextPage = () => {
                 setShowHistory={setShowHistory}
                 historyIndex={historyIndex}
                 currentMoveIndex={currentMoveIndex}
+                onGoToMove={(idx) => {
+                  if (!currentExercise) return;
+                  const moveIdx = Math.min((idx + 1) * 2, currentExercise.analysis.length);
+                  goToHistoryIndex(moveIdx);
+                }}
               />
             </div>
           </div>
