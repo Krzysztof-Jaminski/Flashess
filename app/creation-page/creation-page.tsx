@@ -510,7 +510,7 @@ const CreationPage: NextPage = () => {
   }, [moveHistory]);
 
   return (
-    <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
+    <div className="w-full min-h-screen h-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[10%] -left-[20%] w-[40rem] h-[40rem] rounded-full bg-[rgba(36,245,228,0.18)] blur-[120px]" />
         <div className="absolute top-[60%] right-[-15%] w-[30rem] h-[30rem] rounded-full bg-[rgba(36,245,228,0.08)] blur-[100px]" />
@@ -607,12 +607,12 @@ const CreationPage: NextPage = () => {
                 )}
               </div>
               {/* Center: Chessboard (identycznie jak w TrainingBoard) */}
-              <div className="flex-1 border rounded-lg p-4 flex flex-col items-center" style={{ justifyContent: 'flex-start', background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.3)' }}>
+              <div className="flex-1 border rounded-lg p-4 flex flex-col items-center justify-center mt-6" style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.3)' }}>
                 <div
                   className="aspect-square mt-0"
                   style={{ width: 700, height: 700, minWidth: 700, minHeight: 700, maxWidth: 700, maxHeight: 700 }}
                 >
-                  <div className={`w-full h-full flex items-center justify-center${boardHighlight === 'red' ? ' ring-4' : ''}`}
+                  <div className={`w-full h-full flex items-center justify-center mx-auto${boardHighlight === 'red' ? ' ring-4' : ''}`}
                     style={boardHighlight === 'red' ? { boxShadow: '0 0 0 4px var(--red-55)' } : {}}>
                     <Chessboard
                       position={game.fen()}

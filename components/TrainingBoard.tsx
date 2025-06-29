@@ -24,12 +24,12 @@ const TrainingBoard: React.FC<TrainingBoardProps> = ({
   currentMoveIndex,
   currentExercise
 }) => (
-  <div className="flex-1 border rounded-lg p-4 flex flex-col items-center" style={{ justifyContent: 'flex-start', background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.3)' }}>
+  <div className="flex-1 border rounded-lg p-4 flex flex-col items-center justify-center" style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.3)' }}>
     <div
       className="aspect-square mt-0"
       style={{ width: 700, height: 700, minWidth: 700, minHeight: 700, maxWidth: 700, maxHeight: 700 }}
     >
-      <div className={`w-full h-full flex items-center justify-center ${boardHighlight === 'red' ? 'ring-4' : ''}`}
+      <div className={`w-full h-full flex items-center justify-center mx-auto ${boardHighlight === 'red' ? 'ring-4' : ''}`}
         style={boardHighlight === 'red' ? { boxShadow: '0 0 0 4px var(--red-55)' } : {}}>
         <Chessboard
           position={game.fen()}
