@@ -15,15 +15,6 @@ Aplikacja webowa do treningu szachowego wykorzystująca metodę fiszek. Użytkow
 - **react-chessboard** - komponent szachownicy
 - **chess.js** - logika szachowa, walidacja ruchów, PGN parsing
 
-### Komponenty własne
-- `TrainingBoard` - szachownica z obsługą ruchów
-- `ExerciseList` - lista ćwiczeń z filtrowaniem
-- `RightPanel` - ustawienia i analiza błędów
-- `MoveHistory` - historia ruchów z nawigacją
-- `AppNumberInput` - stylizowane inputy numeryczne
-- `ColorDot` - wybór koloru do treningu
-- `Buttons` - spójne przyciski aplikacji
-
 ### Backend (planowany)
 - **.NET 8** - framework backendowy
 - **Entity Framework Core** - ORM do bazy danych
@@ -39,20 +30,13 @@ Aplikacja webowa do treningu szachowego wykorzystująca metodę fiszek. Użytkow
 ### 1. Strona główna (Home)
 
 **Opis funkcjonalności:**
-Strona powitalna z opisem aplikacji i przyciskami nawigacji. Tło z gradientowymi elementami w kolorze cyan, responsywny design.
-
-**Elementy UI:**
-- Nagłówek "Flashess" w kolorze cyan
-- Opis funkcjonalności aplikacji
-- Przycisk "Training Mode" (czerwony)
-- Przycisk "Creation Mode" (zielony)
-- Tło z blur-efektami
+Strona powitalna z opisem aplikacji i przyciskami nawigacji Responsywny design.
 
 **Interakcje:**
 - Kliknięcie "Training Mode" → przejście do `/training-page`
 - Kliknięcie "Creation Mode" → przejście do `/creation-page`
 
-[tu wstaw screenshot strony głównej]
+![image](https://github.com/user-attachments/assets/d446b1e7-3e74-480e-8dad-e005430533c0)
 
 ### 2. Tryb treningu (Training)
 
@@ -74,11 +58,12 @@ Panel po lewej stronie wyświetlający dostępne ćwiczenia. Zawiera gotowe ćwi
 - Hover na ćwiczeniu → podświetlenie
 
 **Logika:**
-- Sortowanie alfabetyczne z numeracją
+- Zaawansowane Sortowanie alfabetyczne z numeracją
+- Zapis ilości poprawnych i błędnych podejść
 - Automatyczne ładowanie pierwszego ćwiczenia
 - Zapisywanie wyboru w localStorage
 
-[tu wstaw screenshot listy ćwiczeń]
+![image](https://github.com/user-attachments/assets/84bd74e5-b6c8-4ef2-98aa-ee1ad41b9e97)
 
 #### 2.2 Szachownica treningowa (TrainingBoard)
 
@@ -103,7 +88,8 @@ Główny element aplikacji - interaktywna szachownica 700x700px z obsługą ruch
 - Automatyczne przejście do następnego ruchu
 - Obsługa końca ćwiczenia
 
-[tu wstaw screenshot szachownicy w trakcie treningu]
+![image](https://github.com/user-attachments/assets/9ddbd3c4-615c-4af7-b787-f934d9df9eb6)
+
 
 #### 2.3 Panel ustawień (RightPanel)
 
@@ -138,7 +124,8 @@ Panel po prawej stronie z ustawieniami treningu i analizą błędów. Podzielony
 - Zapisywanie ustawień w localStorage
 - Obsługa błędów i statystyk
 
-[tu wstaw screenshot panelu ustawień]
+![image](https://github.com/user-attachments/assets/32a31da0-3fb9-4f26-bb1a-3cd71a92dd31)
+
 
 #### 2.4 Analiza błędów (Mistakes)
 
@@ -159,8 +146,6 @@ Po zakończeniu ćwiczenia wyświetlane są fiszki z błędami. Każda fiszka po
 - Zliczanie błędów podczas treningu
 - Zapisywanie indeksów błędnych ruchów
 - Reset błędów przy zmianie ćwiczenia
-
-[tu wstaw screenshot fiszek z błędami]
 
 #### 2.5 Historia ruchów (MoveHistory)
 
@@ -183,7 +168,8 @@ Komponent wyświetlający historię wykonanych ruchów z możliwością nawigacj
 - Obsługa nieparzystej liczby ruchów
 - Synchronizacja z szachownicą
 
-[tu wstaw screenshot historii ruchów]
+![image](https://github.com/user-attachments/assets/f23d9a9f-b980-4f6f-8fe8-7cc3df5cee8e)
+
 
 ### 3. Tryb tworzenia ćwiczeń (Creation)
 
@@ -211,32 +197,9 @@ Panel po lewej stronie do tworzenia własnych ćwiczeń. Pozwala na dodanie ćwi
 - Automatyczne ładowanie pozycji
 - Zapisywanie w localStorage z unikalnym ID
 
-[tu wstaw screenshot panelu tworzenia]
+![image](https://github.com/user-attachments/assets/30d5cf27-17e1-431b-ac8e-07a88b060152)
 
-#### 3.2 Szachownica tworzenia
-
-**Opis funkcjonalności:**
-Szachownica do ustawiania pozycji i podglądu PGN. Identyczna z szachownicą treningową, ale z dodatkowymi funkcjami.
-
-**Elementy UI:**
-- Szachownica 700x700px
-- Historia ruchów pod szachownicą
-- Przyciski "Clear history", "Remove last move"
-
-**Interakcje:**
-- Drag & drop figur
-- Automatyczne ładowanie PGN
-- Cofanie ruchów
-- Czyszczenie historii
-
-**Logika:**
-- Parsowanie PGN przez chess.js
-- Zapisywanie historii ruchów
-- Synchronizacja z panelem tworzenia
-
-[tu wstaw screenshot szachownicy tworzenia]
-
-#### 3.3 Drzewo debiutowe (Opening Tree)
+#### 3.3 2 Drzewo debiutowe (Opening Tree)
 
 **Opis funkcjonalności:**
 Panel po prawej stronie wyświetlający popularne ruchy dla aktualnej pozycji. Symuluje drzewo debiutowe z Lichess.
@@ -258,7 +221,7 @@ Panel po prawej stronie wyświetlający popularne ruchy dla aktualnej pozycji. S
 - Symulacja ewaluacji pozycji
 - Aktualizacja po każdym ruchu
 
-[tu wstaw screenshot drzewa debiutowego]
+![image](https://github.com/user-attachments/assets/1cd1dabd-fc20-4125-924a-f6fc9a36ecdd)
 
 #### 3.4 Lista własnych ćwiczeń
 
@@ -281,25 +244,26 @@ Sekcja wyświetlająca zapisane własne ćwiczenia z możliwością usuwania i �
 - Usuwanie z localStorage
 - Aktualizacja listy po zmianach
 
-[tu wstaw screenshot listy własnych ćwiczeń]
+![image](https://github.com/user-attachments/assets/0df1cf20-5733-4ad4-a6e1-7a70ed8fab7b)
 
 ---
 
-## Integracja z .NET API (planowana)
+## Integracja z .NET API (cześciowo zaimplementowane)
 
 ### Logowanie użytkownika
 - Formularz logowania/rejestracji
 - JWT Bearer Token
 - Zapisywanie ćwiczeń na koncie
 - Synchronizacja między urządzeniami
-- [tu wstaw screenshot logowania]
+- ![image](https://github.com/user-attachments/assets/5257f450-c602-4721-b1dd-d5d7941bb08f)
+- ![image](https://github.com/user-attachments/assets/113153fe-777b-4d17-9d5d-1e30233cddd2)
+
 
 ### Lichess API
 - Import partii przez URL/ID
 - Pobieranie popularnych ruchów
 - Statystyki debiutowe
 - OAuth autoryzacja
-- [tu wstaw screenshot importu z Lichess]
 
 ### .NET Web API Endpoints
 - `POST /api/exercises` - zapisywanie ćwiczenia
@@ -308,7 +272,6 @@ Sekcja wyświetlająca zapisane własne ćwiczenia z możliwością usuwania i �
 - `GET /api/lichess/game/{id}` - import partii z Lichess
 - `POST /api/auth/login` - logowanie użytkownika
 - `POST /api/auth/register` - rejestracja użytkownika
-- [tu wstaw screenshot API]
 
 ---
 
