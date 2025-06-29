@@ -36,6 +36,18 @@ function getRandomPopularMoves() {
   }));
 }
 
+function ColorDot({ color, selected }: { color: 'white' | 'black', selected?: boolean }) {
+  return (
+    <span
+      className={`inline-block w-4 h-4 rounded-full border transition-all duration-150
+        ${color === 'white' ? 'bg-white border-[#7eeeff] shadow-[0_0_6px_rgba(36,245,228,0.13)]' : 'bg-[#111] border-[#7eeeff]'}
+        ${selected ? 'ring-2 ring-cyan-400 scale-105' : 'opacity-80'}
+      `}
+      style={{ boxShadow: color === 'white' ? '0 0 0 1.5px rgba(36,245,228,0.13)' : undefined }}
+    />
+  );
+}
+
 const CreationPage: NextPage = () => {
   const [game, setGame] = useState(new Chess());
   const [boardWidth, setBoardWidth] = useState(700);
@@ -504,7 +516,7 @@ const CreationPage: NextPage = () => {
         <div className="absolute top-[60%] right-[-15%] w-[30rem] h-[30rem] rounded-full bg-[rgba(36,245,228,0.08)] blur-[100px]" />
         <div className="absolute top-[30%] left-[60%] w-[25rem] h-[25rem] rounded-full bg-[rgba(36,245,228,0.15)] blur-[100px]" />
       </div>
-      <main className="w-full flex flex-col !pt-[0rem] !pb-[2rem] !pl-[0rem] !pr-[0rem] box-border gap-[0.5rem] max-w-full mq1225:!pb-[2rem] mq1225:box-border mq450:gap-[0.3rem] mq450:!pb-[1rem] mq450:box-border mq1525:h-auto">
+      <main className="w-full h-[182rem] flex flex-col !pt-[0rem] !pb-[26.625rem] !pl-[0rem] !pr-[0rem] box-border gap-[0.5rem] max-w-full mq1225:!pb-[7.313rem] mq1225:box-border mq450:gap-[0.3rem] mq450:!pb-[4.75rem] mq450:box-border mq1525:h-auto">
         <main className="w-full flex flex-col gap-[0.7rem] max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-[0.5rem] mq450:gap-[0.2rem]">
           <div className="w-full">
             <TopBar />
@@ -535,15 +547,17 @@ const CreationPage: NextPage = () => {
                   />
                 </div>
 
-                <div className="flex items-center gap-4 mb-3">
+                <div className="flex items-center gap-6 mb-5">
                   <label className="text-white/80 text-sm">Training color:</label>
-                  <label className="flex items-center gap-1">
-                    <input type="radio" checked={customColor==='white'} onChange={()=>setCustomColor('white')} />
-                    <span>White</span>
+                  <label className="flex items-center gap-4 cursor-pointer select-none">
+                    <input type="radio" checked={customColor==='white'} onChange={()=>setCustomColor('white')} className="hidden" />
+                    <ColorDot color="white" selected={customColor==='white'} />
+                    <span className="text-white/80 text-xs ml-1">White</span>
                   </label>
-                  <label className="flex items-center gap-1">
-                    <input type="radio" checked={customColor==='black'} onChange={()=>setCustomColor('black')} />
-                    <span>Black</span>
+                  <label className="flex items-center gap-4 cursor-pointer select-none">
+                    <input type="radio" checked={customColor==='black'} onChange={()=>setCustomColor('black')} className="hidden" />
+                    <ColorDot color="black" selected={customColor==='black'} />
+                    <span className="text-white/80 text-xs ml-1">Black</span>
                   </label>
                 </div>
 

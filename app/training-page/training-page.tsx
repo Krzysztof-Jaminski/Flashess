@@ -330,10 +330,10 @@ const TrainingPage: NextPage = () => {
       if (autoStartingMoves) {
         const movesLimitNum = parseInt(autoMovesLimit);
         if (!isNaN(movesLimitNum) && movesLimitNum > 0) {
-          autoPlayStartingMoves(
-            exercise,
+        autoPlayStartingMoves(
+          exercise,
             movesLimitNum
-          );
+        );
           return;
         }
         // Jeśli limit to 0, po prostu nie rób nic (pozycja początkowa już ustawiona przez resetSession)
@@ -363,12 +363,12 @@ const TrainingPage: NextPage = () => {
     const currentAnalysis = currentExercise.analysis[currentMoveIndex];
     if (currentAnalysis) {
       const moveSan = currentAnalysis.move;
-      const legalMoves = chessTmp.moves({ verbose: true });
-      const correctMove = legalMoves.find((m) => m.san === moveSan);
-      if (correctMove) {
-        hintSquares[correctMove.from] = { background: 'rgba(36,245,228,0.5)' };
-      }
+    const legalMoves = chessTmp.moves({ verbose: true });
+    const correctMove = legalMoves.find((m) => m.san === moveSan);
+    if (correctMove) {
+      hintSquares[correctMove.from] = { background: 'rgba(36,245,228,0.5)' };
     }
+  }
   }
 
   useEffect(() => {
@@ -388,7 +388,7 @@ const TrainingPage: NextPage = () => {
         <div className="absolute top-[22%] right-[-15%] w-[35rem] h-[35rem] rounded-full bg-[rgba(36,245,228,0.15)] blur-[100px]" />
       </div>
 
-      <main className="w-full flex flex-col !pt-[0rem] !pb-[2rem] !pl-[0rem] !pr-[0rem] box-border gap-[0.5rem] max-w-full mq1225:!pb-[2rem] mq1225:box-border mq450:gap-[0.3rem] mq450:!pb-[1rem] mq450:box-border mq1525:h-auto">
+      <main className="w-full h-[182rem] flex flex-col !pt-[0rem] !pb-[26.625rem] !pl-[0rem] !pr-[0rem] box-border gap-[0.5rem] max-w-full mq1225:!pb-[7.313rem] mq1225:box-border mq450:gap-[0.3rem] mq450:!pb-[4.75rem] mq450:box-border mq1525:h-auto">
         <main className="w-full flex flex-col gap-[0.7rem] max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-[0.5rem] mq450:gap-[0.2rem]">
           <div className="w-full">
             <TopBar />
