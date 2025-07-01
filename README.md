@@ -246,6 +246,27 @@ Sekcja wyświetlająca zapisane własne ćwiczenia z możliwością usuwania i �
 
 ![image](https://github.com/user-attachments/assets/0df1cf20-5733-4ad4-a6e1-7a70ed8fab7b)
 
+### 2.6 Vision Mode w trybie treningu
+
+**Opis funkcjonalności:**
+Tryb Vision Mode pozwala na wizualizację pól atakowanych przez białe i czarne figury na szachownicy. Pola są kolorowane w zależności od liczby atakujących i broniących, co ułatwia analizę pozycji i zrozumienie dynamiki na szachownicy.
+
+**Elementy UI:**
+- Przycisk w panelu ustawień do włączenia Vision Mode
+- Podświetlenie pól na szachownicy (czerwony - atak białych, niebieski - atak czarnych, fioletowy - oba kolory)
+- Intensywność koloru zależna od liczby atakujących/broniących
+
+**Interakcje:**
+- Włączenie trybu Vision Mode podświetla pola zgodnie z aktualną pozycją
+- Przewijanie historii automatycznie aktualizuje podświetlenia
+
+**Logika:**
+- Analiza ataków i obrony na podstawie aktualnej pozycji
+- Dynamiczne kolorowanie pól
+
+**Miejsce na zdjęcie:**
+![Vision Mode Screenshot](./vision-mode-example.png)
+
 ---
 
 ## Integracja z .NET API (cześciowo zaimplementowane)
