@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Chess, Square } from "chess.js";
 import TopBar from "./topbar";
 import { getExercises, Exercise } from "../utils/exercises";
@@ -9,7 +9,7 @@ import RightPanel from "./RightPanel";
 import { getVisionOverlays } from "./VisionMode";
 
 const TrainingContainer: React.FC = () => {
-  const [game, setGame] = useState(new Chess());
+  const [fen, setFen] = useState(new Chess().fen());
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [currentExercise, setCurrentExercise] = useState<Exercise | null>(null);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
@@ -32,6 +32,10 @@ const TrainingContainer: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [visionMode, setVisionMode] = useState(false);
   const boardRef = useRef<any>(null);
+  const currentMoveIndexRef = useRef(currentMoveIndex);
+  const historyIndexRef = useRef(historyIndex);
+  const lastHistoryChangeRef = useRef(0);
+  const HISTORY_COOLDOWN = 50; // ms
 
   // Helper to check if a string is a valid Square
   const isValidSquare = (sq: string): sq is Square => {
@@ -47,8 +51,12 @@ const TrainingContainer: React.FC = () => {
     setExercises(getExercises());
   };
 
-  // Funkcja do ustawiania pozycji na podstawie indeksu historii
-  const goToHistoryIndex = (idx: number) => {
+  useEffect(() => {
+    currentMoveIndexRef.current = currentMoveIndex;
+    historyIndexRef.current = historyIndex;
+  }, [currentMoveIndex, historyIndex]);
+
+  const goToHistoryIndex = useCallback((idx: number) => {
     if (!currentExercise) return;
     const chess = new Chess(currentExercise.initialFen);
     for (let i = 0; i < idx; i++) {
@@ -56,31 +64,33 @@ const TrainingContainer: React.FC = () => {
       if (!move || ["0-1", "1-0", "*", "½-½"].includes(move)) break;
       chess.move(move);
     }
-    setGame(chess);
+    setFen(chess.fen());
     setCurrentMoveIndex(idx);
     setHistoryIndex(idx);
-  };
+  }, [currentExercise]);
 
-  // Obsługa strzałek lewo/prawo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const now = Date.now();
+      if (now - lastHistoryChangeRef.current < HISTORY_COOLDOWN) return;
+      lastHistoryChangeRef.current = now;
       if (!currentExercise) return;
       if (e.key === "ArrowLeft") {
-        if (historyIndex === null) {
-          setPreHistoryTrainingIndex(currentMoveIndex);
-          if (currentMoveIndex > 0) goToHistoryIndex(currentMoveIndex - 1);
-        } else if (historyIndex > 0) {
-          goToHistoryIndex(historyIndex - 1);
+        if (historyIndexRef.current === null) {
+          setPreHistoryTrainingIndex(currentMoveIndexRef.current);
+          if (currentMoveIndexRef.current > 0) goToHistoryIndex(currentMoveIndexRef.current - 1);
+        } else if (historyIndexRef.current > 0) {
+          goToHistoryIndex(historyIndexRef.current - 1);
         }
       } else if (e.key === "ArrowRight") {
-        if (historyIndex !== null && historyIndex < currentExercise.analysis.length) {
-          goToHistoryIndex(historyIndex + 1);
+        if (historyIndexRef.current !== null && historyIndexRef.current < currentExercise.analysis.length) {
+          goToHistoryIndex(historyIndexRef.current + 1);
         }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentExercise, historyIndex, currentMoveIndex]);
+  }, [currentExercise, goToHistoryIndex]);
 
   // Obsługa ruchu na szachownicy
   const onPieceDrop = (sourceSquare: string, targetSquare: string, piece: string): boolean => {
@@ -99,19 +109,19 @@ const TrainingContainer: React.FC = () => {
       setShowMistakes(true);
       return false;
     }
-    // Sprawdź, czy ruch jest legalny zanim wywołasz game.move
-    const legalMoves = game.moves({ verbose: true });
+    // Sprawdź, czy ruch jest legalny zanim wywołasz move
+    const chess = new Chess(fen);
+    const legalMoves = chess.moves({ verbose: true });
     const isLegal = legalMoves.some(m => m.from === sourceSquare && m.to === targetSquare);
     if (!isLegal) return false;
 
     // Jeśli komputer ma wykonać ruch, a użytkownik już wykonał swój (premove)
     if (pendingComputerMove) {
-      // Sprawdź, czy ruch użytkownika jest poprawny
-      const moveSan = game.move({ from: sourceSquare, to: targetSquare, promotion: "q" });
+      const moveSan = chess.move({ from: sourceSquare, to: targetSquare, promotion: "q" });
       if (!moveSan) return false;
       const expectedMove = currentExercise.analysis[currentMoveIndex].move;
       if (moveSan.san === expectedMove) {
-        setGame(new Chess(game.fen()));
+        setFen(chess.fen());
         setCurrentMoveIndex((prev) => prev + 1);
         setIsCorrect(true);
         setBoardHighlight(null);
@@ -119,15 +129,13 @@ const TrainingContainer: React.FC = () => {
         const nextIdx = currentMoveIndex + 1;
         if (nextIdx < currentExercise.analysis.length) {
           const nextMove = currentExercise.analysis[nextIdx].move;
-          // Jeśli nextMove to wynik partii, nie wykonuj ruchu
           if (["0-1", "1-0", "*", "½-½"].includes(nextMove)) {
             setShowMistakes(true);
             setPendingComputerMove(null);
             return false;
           }
-          const newGame = new Chess(game.fen());
-          newGame.move(nextMove);
-          setGame(newGame);
+          chess.move(nextMove);
+          setFen(chess.fen());
           setCurrentMoveIndex(nextIdx + 1);
         } else {
           setShowMistakes(true);
@@ -141,46 +149,39 @@ const TrainingContainer: React.FC = () => {
           setMistakes((prev) => [...prev, currentMoveIndex]);
         }
         setTimeout(() => setBoardHighlight(null), 800);
-        game.undo();
-        setGame(new Chess(game.fen()));
+        chess.undo();
+        setFen(chess.fen());
         return false;
       }
     }
 
     // Standardowa logika
-    const moveSan = game.move({ from: sourceSquare, to: targetSquare, promotion: "q" });
+    const moveSan = chess.move({ from: sourceSquare, to: targetSquare, promotion: "q" });
     if (!moveSan) {
-      // Nielegalny ruch: po prostu nie pozwól wykonać
       return false;
     }
-    
-    // Sprawdź czy currentMoveIndex jest w granicach analizy
     if (!currentExercise.analysis[currentMoveIndex]) {
       console.warn('currentMoveIndex out of bounds:', currentMoveIndex, 'analysis length:', currentExercise.analysis.length);
       return false;
     }
-    
     const expectedMove = currentExercise.analysis[currentMoveIndex].move;
     if (moveSan.san === expectedMove) {
-      setGame(new Chess(game.fen()));
+      setFen(chess.fen());
       setCurrentMoveIndex((prev) => prev + 1);
       setIsCorrect(true);
       setBoardHighlight(null);
-      // Ustawiam pendingComputerMove, żeby obsłużyć premove
       setPendingComputerMove("pending");
       setTimeout(() => {
         const nextIdx = currentMoveIndex + 1;
         if (nextIdx < currentExercise.analysis.length) {
           const nextMove = currentExercise.analysis[nextIdx].move;
-          // Jeśli nextMove to wynik partii, nie wykonuj ruchu
           if (["0-1", "1-0", "*", "½-½"].includes(nextMove)) {
             setShowMistakes(true);
             setPendingComputerMove(null);
             return false;
           }
-          const newGame = new Chess(game.fen());
-          newGame.move(nextMove);
-          setGame(newGame);
+          chess.move(nextMove);
+          setFen(chess.fen());
           setCurrentMoveIndex(nextIdx + 1);
         } else {
           setShowMistakes(true);
@@ -195,9 +196,8 @@ const TrainingContainer: React.FC = () => {
         setMistakes((prev) => [...prev, currentMoveIndex]);
       }
       setTimeout(() => setBoardHighlight(null), 800);
-      // Cofnij ruch
-      game.undo();
-      setGame(new Chess(game.fen()));
+      chess.undo();
+      setFen(chess.fen());
       return false;
     }
   };
@@ -215,49 +215,42 @@ const TrainingContainer: React.FC = () => {
       chess.move(move);
       idx++;
     }
-    // Sprawdź, czy na ruchu jest gracz (czyli użytkownik)
-    // Gracz to ten, kto zaczyna ćwiczenie (white, chyba że boardOrientation=black)
     let userColor: 'w' | 'b' = 'w';
     if (exercise.id === 'KID-black') userColor = 'b';
     if (chess.turn() !== userColor && idx < exercise.analysis.length) {
-      // Wykonaj jeszcze jeden ruch, żeby na ruchu był gracz
       const move = exercise.analysis[idx]?.move;
       if (move && !["0-1", "1-0", "*", "½-½"].includes(move)) {
         chess.move(move);
         idx++;
       }
     }
-    setGame(chess);
+    setFen(chess.fen());
     setCurrentMoveIndex(idx);
   }, []);
 
   const loadExercise = (exercise: Exercise) => {
     setCurrentExercise(exercise);
-    setGame(new Chess(exercise.initialFen));
+    setFen(new Chess(exercise.initialFen).fen());
     setCurrentMoveIndex(0);
     setShowSolution(false);
     setIsCorrect(null);
     setUserAnswer("");
     setScore(0);
     setTotalMoves(exercise.analysis.length);
-    // Ustaw orientację szachownicy
     if (exercise.id === 'KID-black') {
       setBoardOrientation('black');
-      // Automatycznie wykonaj pierwszy ruch białych
       const chess = new Chess(exercise.initialFen);
       const firstMove = exercise.analysis[0]?.move;
       if (firstMove) {
         chess.move(firstMove);
-        setGame(chess);
+        setFen(chess.fen());
         setCurrentMoveIndex(1);
       }
     } else {
       setBoardOrientation('white');
-      // Automatyczne ruchy startowe (jeśli wybrano)
       if (autoStartingMoves) {
         const movesLimitNum = parseInt(autoMovesLimit);
         if (!isNaN(movesLimitNum) && movesLimitNum > 0) {
-          // Liczba pełnych ruchów (par: białe+czarne) -> liczba półruchów = movesLimitNum * 2
           const maxMovesNum = movesLimitNum * 2;
           autoPlayStartingMoves(
             exercise,
@@ -265,7 +258,6 @@ const TrainingContainer: React.FC = () => {
           );
           return;
         }
-        // Jeśli limit to 0, po prostu nie rób nic (pozycja początkowa już ustawiona)
         return;
       }
     }
@@ -279,26 +271,25 @@ const TrainingContainer: React.FC = () => {
   };
 
   // Vision overlays
-  const visionSquares = visionMode ? getVisionOverlays(game, 'both') : {};
+  const visionSquares = useMemo(() => visionMode ? getVisionOverlays(new Chess(fen), 'both') : {}, [visionMode, fen]);
 
   // HINT MODE: podświetlenie pola figury do ruszenia
-  let hintSquares: { [key in Square]?: React.CSSProperties } = {};
-  if (hintMode && currentExercise && currentMoveIndex < currentExercise.analysis.length) {
-    const fen = game.fen();
+  const hintSquares = useMemo(() => {
+    if (!(hintMode && currentExercise && currentMoveIndex < currentExercise.analysis.length)) return {};
     const chessTmp = new Chess(fen);
     const currentAnalysis = currentExercise.analysis[currentMoveIndex];
-    if (currentAnalysis) {
-      const moveSan = currentAnalysis.move;
-      const legalMoves = chessTmp.moves({ verbose: true });
-      const correctMove = legalMoves.find((m) => m.san === moveSan);
-      if (correctMove && typeof correctMove.from === 'string' && isValidSquare(correctMove.from)) {
-        hintSquares[correctMove.from] = { background: 'rgba(36,245,228,0.5)' };
-      }
+    if (!currentAnalysis) return {};
+    const moveSan = currentAnalysis.move;
+    const legalMoves = chessTmp.moves({ verbose: true });
+    const correctMove = legalMoves.find((m) => m.san === moveSan);
+    if (correctMove && typeof correctMove.from === 'string' && isValidSquare(correctMove.from)) {
+      return { [correctMove.from]: { background: 'rgba(36,245,228,0.5)' } };
     }
-  }
+    return {};
+  }, [hintMode, currentExercise, currentMoveIndex, fen]);
 
   // Merge overlays: hint overlays only override the relevant squares, vision overlays everywhere else
-  const mergedOverlays: { [key in Square]?: React.CSSProperties } = { ...visionSquares, ...hintSquares };
+  const mergedOverlays = useMemo(() => ({ ...visionSquares, ...hintSquares }), [visionSquares, hintSquares]);
 
   useEffect(() => {
     fetchExercises();
@@ -326,7 +317,7 @@ const TrainingContainer: React.FC = () => {
                 onRandom={loadRandomExercise}
               />
               <TrainingBoard
-                game={game}
+                fen={fen}
                 boardHighlight={boardHighlight}
                 onPieceDrop={onPieceDrop}
                 hintSquares={mergedOverlays}
@@ -349,7 +340,6 @@ const TrainingContainer: React.FC = () => {
                 showMistakes={showMistakes}
                 mistakes={mistakes}
                 currentExercise={currentExercise}
-                setGame={setGame}
                 setCurrentMoveIndex={setCurrentMoveIndex}
                 setShowMistakes={setShowMistakes}
                 setMistakes={setMistakes}

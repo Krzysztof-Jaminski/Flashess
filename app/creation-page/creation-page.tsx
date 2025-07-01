@@ -1,6 +1,6 @@
 "use client";
 import type { NextPage } from "next";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import TopBar from "../../components/topbar";
@@ -69,7 +69,7 @@ const CreationPage: NextPage = () => {
   const [visionMode, setVisionMode] = useState(false);
 
   // Vision overlays
-  const visionSquares = visionMode ? getVisionOverlays(game, 'both') : {};
+  const visionSquares = useMemo(() => visionMode ? getVisionOverlays(game, 'both') : {}, [visionMode, game]);
 
   // Apply settings automatically when they change
   useEffect(() => {

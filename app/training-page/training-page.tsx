@@ -1,6 +1,6 @@
 "use client";
 import type { NextPage } from "next";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Chess, Square } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import TopBar from "../../components/topbar";
@@ -408,8 +408,8 @@ const TrainingPage: NextPage = () => {
   }
 
   // Compute vision overlays
-  let visionSquares: { [key in Square]?: React.CSSProperties } = {};
-  if (visionMode) {
+  const visionSquares: { [key in Square]?: React.CSSProperties } = useMemo(() => {
+    if (!visionMode) return {};
     const fen = game.fen();
     const chessTmp = new Chess(fen);
     const whiteAttacks = getAttackedSquares(chessTmp, 'w');
@@ -418,6 +418,7 @@ const TrainingPage: NextPage = () => {
       ...Object.keys(whiteAttacks),
       ...Object.keys(blackAttacks),
     ]));
+    const result: { [key in Square]?: React.CSSProperties } = {};
     for (const sq of allSquares) {
       if (typeof sq === 'string' && isValidSquare(sq)) {
         const w = whiteAttacks[sq] || 0;
@@ -432,14 +433,15 @@ const TrainingPage: NextPage = () => {
           r = 180; g = 0; bl = 180; a = 0.18 + 0.10 * (w + b - 2);
         }
         if (w > 0 || b > 0) {
-          visionSquares[sq] = {
+          result[sq as Square] = {
             background: `rgba(${r},${g},${bl},${Math.min(a,0.6)})`,
             boxShadow: '0 0 8px 2px rgba(0,0,0,0.08) inset',
           };
         }
       }
     }
-  }
+    return result;
+  }, [visionMode, game]);
 
   // Merge with hintSquares if both are active
   const customSquareStyles: { [key in Square]?: React.CSSProperties } = visionMode

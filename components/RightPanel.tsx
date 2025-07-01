@@ -19,7 +19,6 @@ interface RightPanelProps {
   showMistakes: boolean;
   mistakes: number[];
   currentExercise: Exercise | null;
-  setGame: (g: Chess) => void;
   setCurrentMoveIndex: (idx: number) => void;
   setShowMistakes: (v: boolean) => void;
   setMistakes: (v: number[]) => void;
@@ -44,7 +43,6 @@ const RightPanel: React.FC<RightPanelProps> = ({
   showMistakes,
   mistakes,
   currentExercise,
-  setGame,
   setCurrentMoveIndex,
   setShowMistakes,
   setMistakes,
@@ -125,7 +123,6 @@ const RightPanel: React.FC<RightPanelProps> = ({
                 for (let i = 0; i < firstMistake; i++) {
                   chess.move(currentExercise.analysis[i].move);
                 }
-                setGame(chess);
                 setCurrentMoveIndex(firstMistake);
                 setShowMistakes(false);
                 setMistakes([]);

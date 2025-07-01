@@ -1,10 +1,9 @@
 import React from "react";
 import { Chessboard } from "react-chessboard";
-import { Chess } from "chess.js";
 import { Exercise } from "../utils/exercises";
 
 interface TrainingBoardProps {
-  game: Chess;
+  fen: string;
   boardHighlight: string | null;
   onPieceDrop: (source: string, target: string, piece: string) => boolean;
   hintSquares: { [square: string]: React.CSSProperties };
@@ -15,7 +14,7 @@ interface TrainingBoardProps {
 }
 
 const TrainingBoard: React.FC<TrainingBoardProps> = ({
-  game,
+  fen,
   boardHighlight,
   onPieceDrop,
   hintSquares,
@@ -32,7 +31,7 @@ const TrainingBoard: React.FC<TrainingBoardProps> = ({
       <div className={`w-full h-full flex items-center justify-center mx-auto ${boardHighlight === 'red' ? 'ring-4' : ''}`}
         style={boardHighlight === 'red' ? { boxShadow: '0 0 0 4px var(--red-55)' } : {}}>
         <Chessboard
-          position={game.fen()}
+          position={fen}
           boardWidth={700}
           onPieceDrop={onPieceDrop}
           customSquareStyles={hintSquares}
