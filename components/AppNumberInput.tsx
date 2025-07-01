@@ -9,6 +9,7 @@ interface AppNumberInputProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  id?: string;
 }
 
 const AppNumberInput: React.FC<AppNumberInputProps> = ({
@@ -19,7 +20,8 @@ const AppNumberInput: React.FC<AppNumberInputProps> = ({
   step = 1,
   placeholder,
   className = "",
-  disabled = false
+  disabled = false,
+  id
 }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value.replace(/[^0-9.\-]/g, ""));
@@ -35,6 +37,7 @@ const AppNumberInput: React.FC<AppNumberInputProps> = ({
   return (
     <div className={`relative flex items-center ${className}`} style={{ width: '90px' }}>
       <input
+        id={id}
         type="text"
         inputMode="numeric"
         value={value}

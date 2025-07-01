@@ -1,7 +1,7 @@
 "use client";
 import type { NextPage } from "next";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Chess } from "chess.js";
+import { Chess, Square } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import TopBar from "../../components/topbar";
 import Buttons from "../../components/buttons";
@@ -56,7 +56,33 @@ const TrainingPage: NextPage = () => {
   const [autoStartMoveIndex, setAutoStartMoveIndex] = useState(0);
   const [startBoardMoveNumber, setStartBoardMoveNumber] = useState(1);
   const [isRandomMode, setIsRandomMode] = useState(false);
+  const [visionMode, setVisionMode] = useState(false);
   const boardRef = useRef<any>(null);
+
+  // Helper to check if a string is a valid Square
+  const isValidSquare = (sq: string): sq is Square => {
+    return (
+      sq.length === 2 &&
+      sq[0] >= 'a' && sq[0] <= 'h' &&
+      sq[1] >= '1' && sq[1] <= '8'
+    );
+  };
+
+  // HINT MODE: podświetlenie pola figury do ruszenia
+  let hintSquares: { [key in Square]?: React.CSSProperties } = {};
+  if (hintMode && currentExercise && currentMoveIndex < currentExercise.analysis.length) {
+    const fen = game.fen();
+    const chessTmp = new Chess(fen);
+    const currentAnalysis = currentExercise.analysis[currentMoveIndex];
+    if (currentAnalysis) {
+      const moveSan = currentAnalysis.move;
+      const legalMoves = chessTmp.moves({ verbose: true });
+      const correctMove = legalMoves.find((m) => m.san === moveSan);
+      if (correctMove && typeof correctMove.from === 'string' && isValidSquare(correctMove.from)) {
+        hintSquares[correctMove.from] = { background: 'rgba(36,245,228,0.5)' };
+      }
+    }
+  }
 
   // Pobieranie ćwiczeń z API
   const fetchExercises = async () => {
@@ -355,21 +381,70 @@ const TrainingPage: NextPage = () => {
     setIsCorrect(false);
   };
 
-  // HINT MODE: podświetlenie pola figury do ruszenia
-  let hintSquares: { [square: string]: React.CSSProperties } = {};
-  if (hintMode && currentExercise && currentMoveIndex < currentExercise.analysis.length) {
+  // --- VISION MODE LOGIC ---
+  function getAttackedSquares(chess: Chess, color: 'w' | 'b') {
+    const attacked: Record<string, number> = {};
+    const board = chess.board();
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const piece = board[r][c];
+        if (piece && piece.color === color) {
+          const from = String.fromCharCode(97 + c) + (8 - r);
+          if (isValidSquare(from)) {
+            const moves = chess.moves({ square: from as Square, verbose: true });
+            for (const move of moves) {
+              if (move.flags.includes('c') || move.flags.includes('a') || move.flags.includes('e') || move.flags.includes('q') || move.flags.includes('n') || move.flags.includes('b') || move.flags.includes('r') || move.flags.includes('k')) {
+                // All moves are attacks except castling
+                if (typeof move.to === 'string') {
+                  attacked[move.to] = (attacked[move.to] || 0) + 1;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return attacked;
+  }
+
+  // Compute vision overlays
+  let visionSquares: { [key in Square]?: React.CSSProperties } = {};
+  if (visionMode) {
     const fen = game.fen();
     const chessTmp = new Chess(fen);
-    const currentAnalysis = currentExercise.analysis[currentMoveIndex];
-    if (currentAnalysis) {
-      const moveSan = currentAnalysis.move;
-    const legalMoves = chessTmp.moves({ verbose: true });
-    const correctMove = legalMoves.find((m) => m.san === moveSan);
-    if (correctMove) {
-      hintSquares[correctMove.from] = { background: 'rgba(36,245,228,0.5)' };
+    const whiteAttacks = getAttackedSquares(chessTmp, 'w');
+    const blackAttacks = getAttackedSquares(chessTmp, 'b');
+    const allSquares = Array.from(new Set([
+      ...Object.keys(whiteAttacks),
+      ...Object.keys(blackAttacks),
+    ]));
+    for (const sq of allSquares) {
+      if (typeof sq === 'string' && isValidSquare(sq)) {
+        const w = whiteAttacks[sq] || 0;
+        const b = blackAttacks[sq] || 0;
+        let r = 0, g = 0, bl = 0, a = 0.15;
+        if (w > 0 && b === 0) {
+          r = 255; g = 0; bl = 0; a = 0.13 + 0.13 * (w - 1);
+        } else if (b > 0 && w === 0) {
+          r = 0; g = 100; bl = 255; a = 0.13 + 0.13 * (b - 1);
+        } else if (w > 0 && b > 0) {
+          // Blend red and blue
+          r = 180; g = 0; bl = 180; a = 0.18 + 0.10 * (w + b - 2);
+        }
+        if (w > 0 || b > 0) {
+          visionSquares[sq] = {
+            background: `rgba(${r},${g},${bl},${Math.min(a,0.6)})`,
+            boxShadow: '0 0 8px 2px rgba(0,0,0,0.08) inset',
+          };
+        }
+      }
     }
   }
-  }
+
+  // Merge with hintSquares if both are active
+  const customSquareStyles: { [key in Square]?: React.CSSProperties } = visionMode
+    ? { ...hintSquares, ...visionSquares }
+    : hintSquares;
 
   useEffect(() => {
     fetchExercises();
@@ -404,16 +479,18 @@ const TrainingPage: NextPage = () => {
               />
 
               {/* Środkowa kolumna - Szachownica */}
-              <TrainingBoard
-                game={game}
-                boardHighlight={boardHighlight}
-                onPieceDrop={onPieceDrop}
-                hintSquares={hintSquares}
-                boardOrientation={boardOrientation}
-                mistakes={mistakes}
-                currentMoveIndex={currentMoveIndex}
-                currentExercise={currentExercise}
-              />
+              <div className="flex flex-col items-center">
+                <TrainingBoard
+                  game={game}
+                  boardHighlight={boardHighlight}
+                  onPieceDrop={onPieceDrop}
+                  hintSquares={customSquareStyles}
+                  boardOrientation={boardOrientation}
+                  mistakes={mistakes}
+                  currentMoveIndex={currentMoveIndex}
+                  currentExercise={currentExercise}
+                />
+              </div>
 
               {/* Prawa kolumna - Fiszki z błędami i panele */}
               <RightPanel
@@ -425,6 +502,8 @@ const TrainingPage: NextPage = () => {
                 setAutoMovesLimit={setAutoMovesLimit}
                 hintMode={hintMode}
                 setHintMode={setHintMode}
+                visionMode={visionMode}
+                setVisionMode={fn => setVisionMode(fn)}
                 showMistakes={showMistakes}
                 mistakes={mistakes}
                 currentExercise={currentExercise}

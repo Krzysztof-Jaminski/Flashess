@@ -8,6 +8,7 @@ import Buttons from "../../components/buttons";
 import type { Square } from "chess.js";
 import { API_BASE_URL } from "../../utils/apiConfig";
 import AppNumberInput from "../../components/AppNumberInput";
+import { getVisionOverlays } from "../../components/VisionMode";
 
 interface PopularMove {
   move: string;
@@ -65,6 +66,10 @@ const CreationPage: NextPage = () => {
   const [historyIndex, setHistoryIndex] = useState<number | null>(null);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const boardRef = useRef<any>(null);
+  const [visionMode, setVisionMode] = useState(false);
+
+  // Vision overlays
+  const visionSquares = visionMode ? getVisionOverlays(game, 'both') : {};
 
   // Apply settings automatically when they change
   useEffect(() => {
@@ -526,7 +531,14 @@ const CreationPage: NextPage = () => {
               {/* Left: Add custom exercise */}
               <div className="w-[300px] bg-white/5 border border-white/30 rounded-lg p-4 mb-6 mt-8">
                 <h3 className="text-lg text-cyan-300 mb-3">Add your own exercise</h3>
-                
+                {/* Vision Mode Toggle Button */}
+                <div className="mb-3">
+                  <Buttons
+                    bUTTON={visionMode ? "Vision Mode: ON" : "Vision Mode"}
+                    className={visionMode ? "bg-[rgba(36,245,228,0.13)] border-cyan-400" : ""}
+                    onLogInButtonContainerClick={() => setVisionMode(v => !v)}
+                  />
+                </div>
                 {/* Exercise Name Input */}
                 <div className="mb-3">
                   <input
@@ -619,6 +631,7 @@ const CreationPage: NextPage = () => {
                       boardWidth={700}
                       onPieceDrop={handlePieceDrop}
                       boardOrientation={customColor}
+                      customSquareStyles={visionSquares}
                       customBoardStyle={{
                         borderRadius: "4px",
                         boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",

@@ -14,6 +14,8 @@ interface RightPanelProps {
   setAutoMovesLimit: (v: string) => void;
   hintMode: boolean;
   setHintMode: (v: (prev: boolean) => boolean) => void;
+  visionMode: boolean;
+  setVisionMode: (v: (prev: boolean) => boolean) => void;
   showMistakes: boolean;
   mistakes: number[];
   currentExercise: Exercise | null;
@@ -37,6 +39,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
   setAutoMovesLimit,
   hintMode,
   setHintMode,
+  visionMode,
+  setVisionMode,
   showMistakes,
   mistakes,
   currentExercise,
@@ -57,6 +61,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
       <div className="mb-4">
         <label htmlFor="maxMovesInput" className="block text-white/80 text-sm mb-1">Moves limit (0 = until the end):</label>
         <AppNumberInput
+          id="maxMovesInput"
           value={userMaxMoves}
           onChange={setUserMaxMoves}
           min={0}
@@ -74,8 +79,9 @@ const RightPanel: React.FC<RightPanelProps> = ({
       </div>
       {autoStartingMoves && (
         <div className="mb-4">
-          <label htmlFor="autoMovesLimit" className="block text-white/80 text-sm mb-1">Automatic moves up to move:</label>
+          <label htmlFor="autoMovesLimitInput" className="block text-white/80 text-sm mb-1">Automatic moves up to move:</label>
           <AppNumberInput
+            id="autoMovesLimitInput"
             value={autoMovesLimit}
             onChange={setAutoMovesLimit}
             min={0}
@@ -92,6 +98,14 @@ const RightPanel: React.FC<RightPanelProps> = ({
           className={`!py-1 !px-3 !text-xs !rounded`}
         />
         <span className="text-white/80 text-sm">Hint mode</span>
+      </div>
+      <div className="mb-4 flex items-center gap-2">
+        <Buttons
+          bUTTON={visionMode ? "ON" : "OFF"}
+          onLogInButtonContainerClick={() => setVisionMode(v => !v)}
+          className={`!py-1 !px-3 !text-xs !rounded`}
+        />
+        <span className="text-white/80 text-sm">Vision mode</span>
       </div>
       <h3 className="text-lg mb-3" style={{ color: 'var(--blue-84)' }}>Mistake Flashcards</h3>
       {showMistakes && mistakes.length > 0 ? (

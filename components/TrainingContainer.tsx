@@ -1,11 +1,12 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Chess } from "chess.js";
+import { Chess, Square } from "chess.js";
 import TopBar from "./topbar";
 import { getExercises, Exercise } from "../utils/exercises";
 import ExerciseList from "./ExerciseList";
 import TrainingBoard from "./TrainingBoard";
 import RightPanel from "./RightPanel";
+import { getVisionOverlays } from "./VisionMode";
 
 const TrainingContainer: React.FC = () => {
   const [game, setGame] = useState(new Chess());
@@ -29,7 +30,17 @@ const TrainingContainer: React.FC = () => {
   const [historyIndex, setHistoryIndex] = useState<number | null>(null);
   const [preHistoryTrainingIndex, setPreHistoryTrainingIndex] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [visionMode, setVisionMode] = useState(false);
   const boardRef = useRef<any>(null);
+
+  // Helper to check if a string is a valid Square
+  const isValidSquare = (sq: string): sq is Square => {
+    return (
+      sq.length === 2 &&
+      sq[0] >= 'a' && sq[0] <= 'h' &&
+      sq[1] >= '1' && sq[1] <= '8'
+    );
+  };
 
   // Pobieranie ćwiczeń z API
   const fetchExercises = async () => {
@@ -267,8 +278,11 @@ const TrainingContainer: React.FC = () => {
     }
   };
 
+  // Vision overlays
+  const visionSquares = visionMode ? getVisionOverlays(game, 'both') : {};
+
   // HINT MODE: podświetlenie pola figury do ruszenia
-  let hintSquares: { [square: string]: React.CSSProperties } = {};
+  let hintSquares: { [key in Square]?: React.CSSProperties } = {};
   if (hintMode && currentExercise && currentMoveIndex < currentExercise.analysis.length) {
     const fen = game.fen();
     const chessTmp = new Chess(fen);
@@ -277,11 +291,14 @@ const TrainingContainer: React.FC = () => {
       const moveSan = currentAnalysis.move;
       const legalMoves = chessTmp.moves({ verbose: true });
       const correctMove = legalMoves.find((m) => m.san === moveSan);
-      if (correctMove) {
+      if (correctMove && typeof correctMove.from === 'string' && isValidSquare(correctMove.from)) {
         hintSquares[correctMove.from] = { background: 'rgba(36,245,228,0.5)' };
       }
     }
   }
+
+  // Merge overlays: hint overlays only override the relevant squares, vision overlays everywhere else
+  const mergedOverlays: { [key in Square]?: React.CSSProperties } = { ...visionSquares, ...hintSquares };
 
   useEffect(() => {
     fetchExercises();
@@ -312,7 +329,7 @@ const TrainingContainer: React.FC = () => {
                 game={game}
                 boardHighlight={boardHighlight}
                 onPieceDrop={onPieceDrop}
-                hintSquares={hintSquares}
+                hintSquares={mergedOverlays}
                 boardOrientation={boardOrientation}
                 mistakes={mistakes}
                 currentMoveIndex={currentMoveIndex}
@@ -327,6 +344,8 @@ const TrainingContainer: React.FC = () => {
                 setAutoMovesLimit={setAutoMovesLimit}
                 hintMode={hintMode}
                 setHintMode={setHintMode}
+                visionMode={visionMode}
+                setVisionMode={fn => setVisionMode(fn)}
                 showMistakes={showMistakes}
                 mistakes={mistakes}
                 currentExercise={currentExercise}
