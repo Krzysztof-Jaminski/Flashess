@@ -483,7 +483,7 @@ const TrainingPage: NextPage = () => {
               {/* Środkowa kolumna - Szachownica */}
               <div className="flex flex-col items-center">
                 <TrainingBoard
-                  game={game}
+                  fen={game.fen()}
                   boardHighlight={boardHighlight}
                   onPieceDrop={onPieceDrop}
                   hintSquares={customSquareStyles}
@@ -509,7 +509,6 @@ const TrainingPage: NextPage = () => {
                 showMistakes={showMistakes}
                 mistakes={mistakes}
                 currentExercise={currentExercise}
-                setGame={setGame}
                 setCurrentMoveIndex={setCurrentMoveIndex}
                 setShowMistakes={setShowMistakes}
                 setMistakes={setMistakes}
