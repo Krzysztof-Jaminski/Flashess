@@ -1,6 +1,6 @@
 # Aplikacja do treningu szachowego w stylu fiszek
 
-## Temat pracy
+## Temat
 
 Aplikacja webowa do treningu szachowego wykorzystująca metodę fiszek. Użytkownik rozwiązuje pozycje szachowe, aplikacja sprawdza poprawność ruchów i analizuje błędy. System pozwala na tworzenie własnych zestawów ćwiczeń oraz trening z gotowych pozycji.
 
@@ -264,8 +264,8 @@ Tryb Vision Mode pozwala na wizualizację pól atakowanych przez białe i czarne
 - Analiza ataków i obrony na podstawie aktualnej pozycji
 - Dynamiczne kolorowanie pól
 
-**Miejsce na zdjęcie:**
-![Vision Mode Screenshot](./vision-mode-example.png)
+![image](https://github.com/user-attachments/assets/56b971b4-feb0-49ef-b75a-9e193ccaf903)
+
 
 ---
 
