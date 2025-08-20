@@ -109,8 +109,9 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
           bUTTON="Random"
           onLogInButtonContainerClick={() => {
             if (filteredSortedExercises.length > 0) {
-              const randomIndex = Math.floor(Math.random() * filteredSortedExercises.length);
-              onSelect(filteredSortedExercises[randomIndex]);
+              // Deterministic random selection based on current time (rounded to seconds)
+              const timeBasedIndex = Math.floor(Date.now() / 1000) % filteredSortedExercises.length;
+              onSelect(filteredSortedExercises[timeBasedIndex]);
             }
           }}
           className="!py-1 !px-6 !rounded-xl font-['Russo_One'] min-w-[110px] h-10 flex items-center justify-center bg-[rgba(255,255,255,0.08)] border border-[var(--blue-84)] shadow-md text-base text-white hover:bg-[rgba(36,245,228,0.10)] transition-all duration-150"

@@ -385,8 +385,9 @@ const TrainingContainer: React.FC = () => {
 
   const loadRandomExercise = () => {
     if (exercises.length > 0) {
-      const randomIndex = Math.floor(Math.random() * exercises.length);
-      loadExercise(exercises[randomIndex]);
+      // Deterministic random selection based on current time (rounded to seconds)
+      const timeBasedIndex = Math.floor(Date.now() / 1000) % exercises.length;
+      loadExercise(exercises[timeBasedIndex]);
     }
   };
 

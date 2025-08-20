@@ -461,9 +461,10 @@ const TrainingPage: NextPage = () => {
 
   const loadRandomExercise = () => {
     if (exercises.length > 0) {
-      const randomIndex = Math.floor(Math.random() * exercises.length);
+      // Deterministic random selection based on current time (rounded to seconds)
+      const timeBasedIndex = Math.floor(Date.now() / 1000) % exercises.length;
       setIsRandomMode(true);
-      loadExercise(exercises[randomIndex]);
+      loadExercise(exercises[timeBasedIndex]);
     }
   };
 

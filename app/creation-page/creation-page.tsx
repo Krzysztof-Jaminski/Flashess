@@ -9,14 +9,10 @@ import type { Square } from "chess.js";
 import { API_BASE_URL } from "../../utils/apiConfig";
 import AppNumberInput from "../../components/AppNumberInput";
 import { getVisionOverlays } from "../../components/VisionMode";
+import { getExercises } from "../../utils/exercises";
 
-interface PopularMove {
-  move: string;
-  winRate: number;
-  drawRate: number;
-  lossRate: number;
-  evaluation: number;
-}
+
+
 
 interface AnalysisMove {
   move: string;
@@ -24,18 +20,7 @@ interface AnalysisMove {
   isCritical: boolean;
 }
 
-function getRandomPopularMoves() {
-  const moves = ["e4", "d4", "Nf3", "c4", "g3", "Nc3", "b3", "f4", "b4", "e3", "d3", "h3", "a3"];
-  const n = Math.floor(Math.random() * 4) + 3;
-  const shuffled = moves.sort(() => 0.5 - Math.random());
-  return Array.from({ length: n }).map((_, i) => ({
-    move: shuffled[i],
-    winRate: Math.floor(Math.random() * 50) + 25,
-    drawRate: Math.floor(Math.random() * 30) + 10,
-    lossRate: Math.floor(Math.random() * 30),
-    evaluation: (Math.random() * 2 - 1),
-  }));
-}
+
 
 function ColorDot({ color, selected }: { color: 'white' | 'black', selected?: boolean }) {
   return (
@@ -52,12 +37,9 @@ function ColorDot({ color, selected }: { color: 'white' | 'black', selected?: bo
 const CreationPage: NextPage = () => {
   const [game, setGame] = useState(new Chess());
   const [boardWidth, setBoardWidth] = useState(700);
-  const [popularMoves, setPopularMoves] = useState<PopularMove[]>([]);
   const [analysis, setAnalysis] = useState<AnalysisMove[]>([]);
   const [selectedMove, setSelectedMove] = useState<string | null>(null);
   const [boardHighlight, setBoardHighlight] = useState<string>("");
-  const [criticalThreshold, setCriticalThreshold] = useState<number>(1.0);
-  const [isStockfishMode, setIsStockfishMode] = useState(false);
   const [stockfishMoves, setStockfishMoves] = useState<string[]>([]);
   const [exerciseName, setExerciseName] = useState("");
   const [customPGN, setCustomPGN] = useState("");
@@ -67,6 +49,8 @@ const CreationPage: NextPage = () => {
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const boardRef = useRef<any>(null);
   const [visionMode, setVisionMode] = useState(false);
+
+
 
   // Vision overlays
   const visionSquares = useMemo(() => visionMode ? getVisionOverlays(game, 'both') : {}, [visionMode, game]);
@@ -79,7 +63,6 @@ const CreationPage: NextPage = () => {
       setAnalysis([]);
       setMoveHistory([]);
       setHistoryIndex(null);
-      fetchPopularMoves(new Chess().fen());
     }
   }, [customColor]);
 
@@ -115,67 +98,13 @@ const CreationPage: NextPage = () => {
     setHistoryIndex(idx);
   };
 
-  const fetchPopularMoves = async (fen: string) => {
-    try {
-      const mockMoves: PopularMove[] = [
-        {
-          move: "e4",
-          winRate: 45,
-          drawRate: 35,
-          lossRate: 20,
-          evaluation: 0.3,
-        },
-        {
-          move: "d4",
-          winRate: 42,
-          drawRate: 38,
-          lossRate: 20,
-          evaluation: 0.2,
-        },
-        {
-          move: "Nf3",
-          winRate: 40,
-          drawRate: 40,
-          lossRate: 20,
-          evaluation: 0.1,
-        },
-        {
-          move: "c4",
-          winRate: 38,
-          drawRate: 42,
-          lossRate: 20,
-          evaluation: 0.0,
-        },
-        {
-          move: "g3",
-          winRate: 35,
-          drawRate: 45,
-          lossRate: 20,
-          evaluation: -0.1,
-        },
-      ];
 
-      const sorted = mockMoves.sort(
-        (a, b) => b.winRate + b.drawRate - (a.winRate + a.drawRate)
-      );
-      setPopularMoves(sorted);
-
-      // Rzeczywiste API:
-      // const response = await fetch(`${API_BASE_URL}/api/popular-moves`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ fen })
-      // });
-      // const data = await response.json();
-      // setPopularMoves(data.moves.sort((a, b) => (b.winRate + b.drawRate) - (a.winRate + a.drawRate)));
-    } catch (error) {
-      console.error("Error fetching popular moves:", error);
-    }
-  };
 
   const checkPositionEvaluation = async (fen: string) => {
     try {
-      const mockEvaluation = Math.random() * 2 - 1;
+      // Deterministic evaluation based on FEN hash
+      const hash = fen.split(' ').join('').length;
+      const mockEvaluation = ((hash % 200) - 100) / 100; // -1.0 to 1.0
       return mockEvaluation;
 
       // const response = await fetch(`${API_BASE_URL}/api/evaluate-position`, {...})
@@ -234,32 +163,37 @@ const CreationPage: NextPage = () => {
     newGame.move({ from: selected.from, to: selected.to, promotion: "q" });
     setGame(newGame);
 
-    // Add to move history
-    setMoveHistory(prev => [...prev, move]);
-    setHistoryIndex(moveHistory.length);
+    // Sprawdź czy jesteśmy na ostatnim ruchu historii
+    const isAtLatestMove = historyIndex === null || historyIndex === moveHistory.length;
+    
+    if (isAtLatestMove) {
+      // Dodaj do historii tylko jeśli jesteśmy na ostatnim ruchu
+      setMoveHistory(prev => {
+        const newLength = prev.length + 1;
+        setHistoryIndex(newLength);
+        return [...prev, move];
+      });
 
     const evaluation = await checkPositionEvaluation(newGame.fen());
-    const isCritical = Math.abs(evaluation) >= criticalThreshold;
 
     setAnalysis((prev) => [
       ...prev,
       {
         move,
         evaluation,
-        isCritical,
+          isCritical: false,
       },
     ]);
-
-    if (isCritical) {
-      setBoardHighlight("rgba(135, 206, 250, 0.3)");
-      setIsStockfishMode(true);
-      const sfMoves = await fetchStockfishMoves(newGame.fen());
-      setStockfishMoves(sfMoves);
     } else {
-      setBoardHighlight("");
+      // Jeśli nie jesteśmy na ostatnim ruchu, to jest wariant - nie dodawaj do historii
+      // Ustaw historyIndex na pozycję po aktualnym ruchu w wariancie
+      setHistoryIndex(moveHistory.length + 1);
     }
 
-    fetchPopularMoves(newGame.fen());
+    setBoardHighlight("");
+    
+    // Reset selected move after making the move
+    setSelectedMove(null);
   };
 
   const handlePieceDrop = (sourceSquare: Square, targetSquare: Square) => {
@@ -282,23 +216,29 @@ const CreationPage: NextPage = () => {
 
     const algebraicMove = result.san;
 
-    if (
-      isStockfishMode &&
-      !stockfishMoves.includes(algebraicMove) &&
-      !stockfishMoves.includes(move.from + move.to)
-    ) {
-      setBoardHighlight("rgba(255, 0, 0, 0.3)");
-      setTimeout(() => setBoardHighlight("rgba(135, 206, 250, 0.3)"), 1000);
-      return false;
-    }
+
 
     setGame(newGame);
     
-    // Add to move history
-    setMoveHistory(prev => [...prev, algebraicMove]);
-    setHistoryIndex(moveHistory.length);
+    // Sprawdź czy jesteśmy na ostatnim ruchu historii
+    const isAtLatestMove = historyIndex === null || historyIndex === moveHistory.length;
     
-    fetchPopularMoves(newGame.fen());
+    if (isAtLatestMove) {
+      // Dodaj do historii tylko jeśli jesteśmy na ostatnim ruchu
+      setMoveHistory(prev => {
+        const newLength = prev.length + 1;
+        setHistoryIndex(newLength);
+        return [...prev, algebraicMove];
+      });
+    } else {
+      // Jeśli nie jesteśmy na ostatnim ruchu, to jest wariant - nie dodawaj do historii
+      // Ustaw historyIndex na pozycję po aktualnym ruchu w wariancie
+      setHistoryIndex(moveHistory.length + 1);
+    }
+    
+    // Reset selected move after making the move
+    setSelectedMove(null);
+    
     return true;
   };
 
@@ -335,6 +275,11 @@ const CreationPage: NextPage = () => {
     setExerciseName("");
     // Refresh the custom exercises list
     setCustomExercises(customExercises);
+    
+    // Dodaj zieloną obwódkę i odśwież popular moves
+    setHighlightButton(true);
+    setRefreshTrigger(prev => prev + 1); // Wymuś re-render popular moves
+    setTimeout(() => setHighlightButton(false), 2000); // Usuń po 2 sekundach
   };
 
   // Function to add current board history as exercise
@@ -364,6 +309,11 @@ const CreationPage: NextPage = () => {
     setExerciseName("");
     // Refresh the custom exercises list
     setCustomExercises(customExercises);
+    
+    // Dodaj zieloną obwódkę i odśwież popular moves
+    setHighlightButton(true);
+    setRefreshTrigger(prev => prev + 1); // Wymuś re-render popular moves
+    setTimeout(() => setHighlightButton(false), 2000); // Usuń po 2 sekundach
   };
 
   // Function to preview PGN on the board
@@ -378,6 +328,7 @@ const CreationPage: NextPage = () => {
       setMoveHistory(chess.history());
       setHistoryIndex(chess.history().length);
       setCustomError("");
+      setSelectedMove(null);
     } catch (e) {
       setCustomError("");
     }
@@ -395,7 +346,9 @@ const CreationPage: NextPage = () => {
       setHistoryIndex(chess.history().length);
       setCustomPGN(exercise.pgn || "");
       setCustomColor(exercise.color || 'white');
-      fetchPopularMoves(chess.fen());
+      
+      // Reset selected move when loading new exercise
+      setSelectedMove(null);
     } catch (e) {
       setCustomError("");
     }
@@ -413,8 +366,13 @@ const CreationPage: NextPage = () => {
 
   // Load custom exercises for display
   const [customExercises, setCustomExercises] = useState<any[]>([]);
+  const [showCustomExercises, setShowCustomExercises] = useState(false);
+  const [highlightButton, setHighlightButton] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const loadCustomExercises = () => {
       try {
         const exercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
@@ -446,6 +404,7 @@ const CreationPage: NextPage = () => {
               setAnalysis([]);
               setHistoryIndex(null);
               setGame(new Chess());
+              setSelectedMove(null);
             }}
           />
           <Buttons
@@ -462,10 +421,11 @@ const CreationPage: NextPage = () => {
               }
               setGame(chess);
               setHistoryIndex(newHistory.length);
+              setSelectedMove(null);
             }}
           />
         </div>
-        {/* Reszta historii jak dotychczas */}
+        {/* Historia ruchów z obsługą wariantów */}
         {moveHistory.length === 0 ? (
           <div className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-2 text-xs text-white/60">
             No moves played yet
@@ -479,6 +439,13 @@ const CreationPage: NextPage = () => {
               const black = moveHistory[i + 1] || "";
               out.push(`${num}. ${white} ${black}`.trim());
             }
+            
+            // Dodaj informację o wariantach jeśli historyIndex > moveHistory.length
+            let variantInfo = "";
+            if (historyIndex !== null && historyIndex > moveHistory.length) {
+              variantInfo = ` (variant)`;
+            }
+            
             return (
               <div className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-2 text-xs text-white/80 max-h-64 overflow-y-auto custom-scrollbar">
                 <div className="font-bold mb-1">Move History</div>
@@ -486,8 +453,13 @@ const CreationPage: NextPage = () => {
                   {out.map((line, idx) => (
                     <span key={idx} className={historyIndex !== null && Math.floor(historyIndex/2) === idx ? "text-cyan-400 font-bold" : ""}>{line}</span>
                   ))}
+                  {variantInfo && (
+                    <span className="text-yellow-400 italic">{variantInfo}</span>
+                  )}
                 </div>
-                <div className="mt-1 text-white/50 text-xs">Use ←/→ arrows to browse history</div>
+                <div className="mt-1 text-white/50 text-xs">
+                  Use ←/→ arrows to browse history{variantInfo ? " • Current position is a variant" : ""}
+                </div>
               </div>
             );
           })()
@@ -505,14 +477,7 @@ const CreationPage: NextPage = () => {
     return () => window.removeEventListener("resize", updateBoardWidth);
   }, []);
 
-  useEffect(() => {
-    fetchPopularMoves(game.fen());
-  }, []);
 
-  // Po każdej zmianie historii generuj losowe popularMoves
-  useEffect(() => {
-    setPopularMoves(getRandomPopularMoves());
-  }, [moveHistory]);
 
   return (
     <div className="w-full min-h-screen h-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
@@ -591,32 +556,6 @@ const CreationPage: NextPage = () => {
                 
                 {/* Move History - moved to left panel */}
                 {renderMoveHistory()}
-                
-                {/* Custom Exercises List */}
-                {customExercises.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="text-md text-cyan-300 mb-2">Your Custom Exercises</h4>
-                    <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
-                      {customExercises.map((exercise) => (
-                        <div key={exercise.id} className="flex items-center justify-between p-2 bg-white/5 rounded border border-white/10">
-                          <div 
-                            className="flex-1 cursor-pointer hover:bg-white/10 transition-colors p-1 rounded"
-                            onClick={() => loadExerciseToBoard(exercise)}
-                          >
-                            <div className="text-sm font-bold text-white">{exercise.name}</div>
-                            <div className="text-xs text-white/60">{exercise.color} to play</div>
-                          </div>
-                          <button
-                            onClick={() => deleteCustomExercise(exercise.id)}
-                            className="ml-2 px-2 py-1 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-xs hover:bg-red-500/30 transition-colors"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
               {/* Center: Chessboard (identycznie jak w TrainingBoard) */}
               <div className="flex-1 border rounded-lg p-4 flex flex-col items-center justify-center mt-6" style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.3)' }}>
@@ -643,26 +582,135 @@ const CreationPage: NextPage = () => {
                   </div>
                 </div>
               </div>
-              {/* Right: Opening Tree with move history */}
+              {/* Right: Popular Moves with Opening Tree Integration */}
               <div className="w-[370px] bg-white/5 border border-white/30 rounded-lg p-4 mt-8">
-                <h3 className="text-lg text-cyan-300 mb-3">Opening Tree</h3>
+                <h3 className="text-lg text-cyan-300 mb-3">Exercise Lines Analyzed</h3>
+                
+                
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 mb-3">
-                    <label className="text-white/80 text-sm">
-                      Critical threshold:
-                    </label>
-                    <AppNumberInput
-                      value={criticalThreshold.toString()}
-                      onChange={v => setCriticalThreshold(parseFloat(v) || 0)}
-                      step={0.1}
-                      min={0}
-                      className="w-[70px]"
-                    />
-                  </div>
-                  {(popularMoves.length >= 7 ? popularMoves.slice(0, 7) : [...popularMoves, ...getRandomPopularMoves().slice(0, 7 - popularMoves.length)]).map((move, index) => (
+
+                  
+                  {/* Popular Moves from Study Database + User Exercises */}
+                  {(() => {
+                    // Pobierz bazę gier study z exercises.json
+                    const studyGames = getExercises();
+                    
+                    // Dodaj ćwiczenia użytkownika do bazy study tylko po stronie klienta
+                    const allGames = [...studyGames, ...(isClient ? customExercises : [])];
+                    
+                    // refreshTrigger wymusza re-render gdy dodamy nowe ćwiczenie
+                    const _ = refreshTrigger;
+                    
+                    // Pobierz ruchy z bazy study w zależności od pozycji
+                    const popularMoves: Array<{
+                      move: string;
+                      name: string;
+                      games?: string[];
+                    }> = [];
+                    
+                    if (moveHistory.length === 0) {
+                      // Dla pozycji startowej pokaż pierwsze ruchy z bazy study + ćwiczeń użytkownika
+                      const firstMoves = new Map<string, { count: number, games: string[] }>();
+                      
+                      allGames.forEach(game => {
+                        let moves: string[] = [];
+                        
+                        // Sprawdź czy to ćwiczenie z analysis czy z pgn
+                        if (game.analysis && game.analysis.length > 0) {
+                          // Ćwiczenie z analysis
+                          moves = game.analysis.map((a: any) => a.move);
+                        } else if (game.pgn) {
+                          // Ćwiczenie z pgn (custom exercises)
+                          moves = game.pgn.split(' ').filter((m: string) => m !== '1.' && m !== '2.' && m !== '3.' && m !== '4.' && m !== '5.' && m !== '6.' && m !== '7.' && m !== '8.' && m !== '9.' && m !== '10.' && m !== '');
+                        }
+                        
+                        const firstMove = moves[0];
+                        if (firstMove) {
+                          if (!firstMoves.has(firstMove)) {
+                            firstMoves.set(firstMove, { count: 1, games: [game.name] });
+                          } else {
+                            const existing = firstMoves.get(firstMove)!;
+                            existing.count++;
+                            existing.games.push(game.name);
+                          }
+                        }
+                      });
+                      
+                      // Sortuj według popularności i dodaj do popularMoves
+                      Array.from(firstMoves.entries())
+                        .sort((a, b) => b[1].count - a[1].count)
+                        .forEach(([move, data]) => {
+                          popularMoves.push({
+                            move,
+                            name: `${data.count} games`,
+                            games: data.games
+                          });
+                        });
+                    } else {
+                      // Dla innych pozycji znajdź gry które mają te same ruchy
+                      const matchingGames = allGames.filter(game => {
+                        let gameMoves: string[] = [];
+                        
+                        // Sprawdź czy to ćwiczenie z analysis czy z pgn
+                        if (game.analysis && game.analysis.length > 0) {
+                          // Ćwiczenie z analysis
+                          gameMoves = game.analysis.map((a: any) => a.move);
+                        } else if (game.pgn) {
+                          // Ćwiczenie z pgn (custom exercises)
+                          gameMoves = game.pgn.split(' ').filter((m: string) => m !== '1.' && m !== '2.' && m !== '3.' && m !== '4.' && m !== '5.' && m !== '6.' && m !== '7.' && m !== '8.' && m !== '9.' && m !== '10.' && m !== '');
+                        }
+                        
+                        if (gameMoves.length === 0) return false;
+                        
+                        const currentMoves = moveHistory;
+                        
+                        // Sprawdź czy gra zaczyna się od aktualnych ruchów
+                        if (gameMoves.length < currentMoves.length) return false;
+                        return currentMoves.every((move, index) => gameMoves[index] === move);
+                      });
+                      
+                      // Pobierz następne ruchy z pasujących gier
+                      const nextMoves = new Map<string, { count: number, games: string[] }>();
+                      matchingGames.forEach(game => {
+                        let gameMoves: string[] = [];
+                        
+                        // Sprawdź czy to ćwiczenie z analysis czy z pgn
+                        if (game.analysis && game.analysis.length > 0) {
+                          // Ćwiczenie z analysis
+                          gameMoves = game.analysis.map((a: any) => a.move);
+                        } else if (game.pgn) {
+                          // Ćwiczenie z pgn (custom exercises)
+                          gameMoves = game.pgn.split(' ').filter((m: string) => m !== '1.' && m !== '2.' && m !== '3.' && m !== '4.' && m !== '5.' && m !== '6.' && m !== '7.' && m !== '8.' && m !== '9.' && m !== '10.' && m !== '');
+                        }
+                        
+                        const nextMove = gameMoves[moveHistory.length];
+                        if (nextMove) {
+                          if (!nextMoves.has(nextMove)) {
+                            nextMoves.set(nextMove, { count: 1, games: [game.name] });
+                          } else {
+                            const existing = nextMoves.get(nextMove)!;
+                            existing.count++;
+                            existing.games.push(game.name);
+                          }
+                        }
+                      });
+                      
+                      // Dodaj następne ruchy
+                      Array.from(nextMoves.entries())
+                        .sort((a, b) => b[1].count - a[1].count)
+                        .forEach(([move, data]) => {
+                          popularMoves.push({
+                            move,
+                            name: `${data.count} games`,
+                            games: data.games
+                          });
+                        });
+                    }
+                    
+                    return popularMoves.map((move, index) => (
                     <div
                       key={index}
-                      className={`p-2 rounded cursor-pointer transition-colors ${
+                        className={`p-3 rounded cursor-pointer transition-colors ${
                         selectedMove === move.move
                           ? "bg-cyan-400/30 border border-cyan-400/50"
                           : "bg-white/10 hover:bg-white/15"
@@ -671,21 +719,60 @@ const CreationPage: NextPage = () => {
                     >
                       <div className="text-sm font-bold">{move.move}</div>
                       <div className="text-xs text-white/70">
-                        Win: {move.winRate}% | Draw: {move.drawRate}% | Loss: {move.lossRate}%
+                          {move.name}
                       </div>
                       <div className="text-xs text-white/60">
-                        Eval: {move.evaluation.toFixed(2)}
+                          {move.games && move.games.length > 0 && (
+                            <div className="text-cyan-300">
+                              {move.games.slice(0, 2).join(', ')}
+                              {move.games.length > 2 && '...'}
+                            </div>
+                          )}
+                        </div>
                       </div>
+                    ));
+                  })()}
+                  
+                  {/* Custom Exercises Section */}
+                  {isClient && customExercises.length > 0 && (
+                    <div className="mt-6">
+                      <button
+                        onClick={() => setShowCustomExercises(!showCustomExercises)}
+                        className={`w-full p-3 bg-white/10 border rounded-lg hover:bg-white/15 transition-all duration-200 flex items-center justify-between ${
+                          highlightButton 
+                            ? 'border-green-400 shadow-lg shadow-green-400/20' 
+                            : 'border-white/20'
+                        }`}
+                      >
+                        <span className="text-sm font-bold text-white">
+                          Your Custom Exercises ({customExercises.length})
+                        </span>
+                        <span className="text-white">
+                          {showCustomExercises ? '▼' : '▶'}
+                        </span>
+                      </button>
+                      
+                      {showCustomExercises && (
+                        <div className="mt-3 space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                          {customExercises.map((exercise) => (
+                            <div key={exercise.id} className="flex items-center justify-between p-2 bg-white/5 rounded border border-white/10">
+                              <div 
+                                className="flex-1 cursor-pointer hover:bg-white/10 transition-colors p-1 rounded"
+                                onClick={() => loadExerciseToBoard(exercise)}
+                              >
+                                <div className="text-sm font-bold text-white">{exercise.name}</div>
+                                <div className="text-xs text-white/60">{exercise.color} to play</div>
+                              </div>
+                              <button
+                                onClick={() => deleteCustomExercise(exercise.id)}
+                                className="ml-2 px-2 py-1 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-xs hover:bg-red-500/30 transition-colors"
+                              >
+                                Delete
+                              </button>
                     </div>
                   ))}
-                  {isStockfishMode && (
-                    <div className="mt-4 p-2 bg-blue-500/20 border border-blue-500/50 rounded">
-                      <div className="text-sm text-blue-300 font-bold">
-                        Stockfish Mode Active
                       </div>
-                      <div className="text-xs text-blue-200">
-                        Playing best moves...
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>
