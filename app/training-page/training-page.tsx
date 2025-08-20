@@ -68,6 +68,14 @@ const TrainingPage: NextPage = () => {
     );
   };
 
+  // Helper to check if a move belongs to white
+  const isWhiteMove = (chess: Chess, moveSan: string): boolean => {
+    const legalMoves = chess.moves({ verbose: true });
+    const isLegal = legalMoves.some(m => m.san === moveSan);
+
+    return isLegal;
+  };
+
   // HINT MODE: podświetlenie pola figury do ruszenia
   let hintSquares: { [key in Square]?: React.CSSProperties } = {};
   if (hintMode && currentExercise && currentMoveIndex < currentExercise.analysis.length) {
@@ -214,7 +222,7 @@ const TrainingPage: NextPage = () => {
     }
     // Sprawdź czy currentMoveIndex jest w granicach analizy
     if (!currentExercise.analysis[currentMoveIndex]) {
-      console.warn('currentMoveIndex out of bounds:', currentMoveIndex, 'analysis length:', currentExercise.analysis.length);
+      
       return false;
     }
     const expectedMove = currentExercise.analysis[currentMoveIndex].move;
@@ -277,37 +285,46 @@ const TrainingPage: NextPage = () => {
   };
 
   // Funkcja do automatycznego wykonywania ruchów startowych
-  const autoPlayStartingMoves = useCallback((exercise: Exercise, maxFullMoves: number) => {
-    if (maxFullMoves === 0) {
-      setGame(new Chess(exercise.initialFen));
-      setCurrentMoveIndex(0);
-      setAutoStartMoveIndex(0);
-      setStartBoardMoveNumber(1);
-      return;
-    }
+  const autoPlayStartingMoves = useCallback((exercise: Exercise, maxFullMoves: number, startFromIndex: number = 0) => {
     const chess = new Chess(exercise.initialFen);
-    let idx = 0;
+    let idx = startFromIndex;
     let fullMoves = 0;
+    
+    // Wykonaj ruchy od określonego indeksu do limitu
     while (
       idx < exercise.analysis.length &&
       fullMoves < maxFullMoves
     ) {
       const move = exercise.analysis[idx]?.move;
       if (!move || ["0-1", "1-0", "*", "½-½"].includes(move)) break;
-      chess.move(move);
-      idx++;
-      if (idx % 2 === 0) fullMoves++;
-    }
-    // Sprawdź, czy na ruchu jest gracz (czyli użytkownik)
-    let userColor: 'w' | 'b' = 'w';
-    if (exercise.color === 'black' || exercise.id === 'KID-black') userColor = 'b';
-    if (chess.turn() !== userColor && idx < exercise.analysis.length) {
-      const move = exercise.analysis[idx]?.move;
-      if (move && !["0-1", "1-0", "*", "½-½"].includes(move)) {
-        chess.move(move);
-        idx++;
+      
+
+      
+      // Sprawdź czy ruch jest legalny przed wykonaniem
+      try {
+        const legalMoves = chess.moves({ verbose: true });
+        const isLegal = legalMoves.some(m => m.san === move);
+        
+        if (isLegal) {
+          chess.move(move);
+          idx++;
+          if (idx % 2 === 0) fullMoves++;
+
+        } else {
+          // Ruch nie jest legalny - zatrzymaj się tutaj
+          console.warn(`Move ${move} is not legal at position ${chess.fen()}`);
+
+          break;
+        }
+      } catch (error) {
+        // Błąd podczas wykonywania ruchu - zatrzymaj się
+        console.warn(`Error executing move ${move}:`, error);
+        break;
       }
     }
+    
+
+    
     setGame(chess);
     setCurrentMoveIndex(idx);
     setAutoStartMoveIndex(idx);
@@ -331,6 +348,7 @@ const TrainingPage: NextPage = () => {
   };
 
   const loadExercise = (exercise: Exercise) => {
+
     setCurrentExercise(exercise);
     resetSession(exercise);
     setScore(0);
@@ -339,27 +357,100 @@ const TrainingPage: NextPage = () => {
     
     // Ustaw orientację szachownicy na podstawie ćwiczenia
     if (exercise.color === 'black' || exercise.id === 'KID-black') {
+
       setBoardOrientation('black');
-      // Automatycznie wykonaj pierwszy ruch białych
+      
+      // Sprawdź czy pierwszy ruch należy do białych czy czarnych
       const chess = new Chess(exercise.initialFen);
       const firstMove = exercise.analysis[0]?.move;
+      
+
+      
       if (firstMove && !["0-1", "1-0", "*", "½-½"].includes(firstMove)) {
-        chess.move(firstMove);
+        // Sprawdź czy pierwszy ruch jest legalny dla białych
+        if (isWhiteMove(chess, firstMove)) {
+  
+          // Pierwszy ruch należy do białych - wykonaj go automatycznie
+          chess.move(firstMove);
+          setGame(chess);
+          setCurrentMoveIndex(1);
+          setAutoStartMoveIndex(1);
+          setStartBoardMoveNumber(1);
+          
+          // Sprawdź czy włączono automatyczne ruchy startowe
+          if (autoStartingMoves) {
+            const movesLimitNum = parseInt(autoMovesLimit);
+            if (!isNaN(movesLimitNum) && movesLimitNum > 0) {
+              // Kontynuuj automatyczne ruchy od pozycji po pierwszym ruchu białych
+              const remainingMoves = movesLimitNum - 1; // Odejmujemy 1, bo już wykonaliśmy pierwszy ruch
+              if (remainingMoves > 0) {
+    
+                autoPlayStartingMoves(
+                  exercise,
+                  remainingMoves,
+                  1 // Startuj od indeksu 1 (po pierwszym ruchu białych)
+                );
+                return;
+              }
+            }
+          }
+        } else {
+  
+          // Pierwszy ruch należy do czarnych - użytkownik zaczyna
+          setGame(chess);
+          setCurrentMoveIndex(0);
+          setAutoStartMoveIndex(0);
+          setStartBoardMoveNumber(1);
+          
+          // Sprawdź czy włączono automatyczne ruchy startowe
+          if (autoStartingMoves) {
+            const movesLimitNum = parseInt(autoMovesLimit);
+            if (!isNaN(movesLimitNum) && movesLimitNum > 0) {
+  
+              autoPlayStartingMoves(
+                exercise,
+                movesLimitNum,
+                0 // Startuj od początku
+              );
+              return;
+            }
+          }
+        }
+      } else {
+
+        // Brak ruchów lub nieprawidłowy ruch
         setGame(chess);
-        setCurrentMoveIndex(1);
-        setAutoStartMoveIndex(1);
+        setCurrentMoveIndex(0);
+        setAutoStartMoveIndex(0);
         setStartBoardMoveNumber(1);
+        
+        // Sprawdź czy włączono automatyczne ruchy startowe
+        if (autoStartingMoves) {
+          const movesLimitNum = parseInt(autoMovesLimit);
+          if (!isNaN(movesLimitNum) && movesLimitNum > 0) {
+
+            autoPlayStartingMoves(
+              exercise,
+              movesLimitNum,
+              0 // Startuj od początku
+            );
+            return;
+          }
+        }
       }
     } else {
+
       setBoardOrientation('white');
       // Automatyczne ruchy startowe (jeśli wybrano)
       if (autoStartingMoves) {
         const movesLimitNum = parseInt(autoMovesLimit);
         if (!isNaN(movesLimitNum) && movesLimitNum > 0) {
-        autoPlayStartingMoves(
-          exercise,
-            movesLimitNum
-        );
+
+          autoPlayStartingMoves(
+            exercise,
+            movesLimitNum,
+            0 // Startuj od początku
+          );
           return;
         }
         // Jeśli limit to 0, po prostu nie rób nic (pozycja początkowa już ustawiona przez resetSession)
@@ -477,7 +568,6 @@ const TrainingPage: NextPage = () => {
                 exercises={exercises}
                 currentExercise={currentExercise}
                 onSelect={loadExercise}
-                onRandom={loadRandomExercise}
               />
 
               {/* Środkowa kolumna - Szachownica */}

@@ -39,7 +39,7 @@ const RegisterPage: NextPage = () => {
         <div className="absolute top-[22%] right-[-15%] w-[35rem] h-[35rem] rounded-full bg-[rgba(36,245,228,0.15)] blur-[100px]" />
       </div>
 
-      <main className="w-full flex flex-col !pt-[0rem] !pb-[26.625rem] !pl-[0rem] !pr-[0rem] box-border gap-[2.625rem] max-w-full mq1225:!pb-[7.313rem] mq1225:box-border mq450:gap-[1.313rem] mq450:!pb-[4.75rem] mq450:box-border mq1525:h-auto">
+      <main className="w-full flex flex-col !pt-[0rem] !pb-[16rem] !pl-[0rem] !pr-[0rem] box-border gap-[2.625rem] max-w-full mq1225:!pb-[12rem] mq1225:box-border mq450:gap-[1.313rem] mq450:!pb-[8rem] mq450:box-border mq1525:h-auto">
         <main className="w-full flex flex-col gap-[5.062rem] max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-[2.5rem] mq450:gap-[1.25rem]">
           <div className="w-full">
             <TopBar />

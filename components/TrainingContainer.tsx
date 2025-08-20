@@ -46,6 +46,12 @@ const TrainingContainer: React.FC = () => {
     );
   };
 
+  // Helper to check if a move belongs to white
+  const isWhiteMove = (chess: Chess, moveSan: string): boolean => {
+    const legalMoves = chess.moves({ verbose: true });
+    return legalMoves.some(m => m.san === moveSan);
+  };
+
   // Pobieranie ćwiczeń z API
   const fetchExercises = async () => {
     setExercises(getExercises());
@@ -161,7 +167,7 @@ const TrainingContainer: React.FC = () => {
       return false;
     }
     if (!currentExercise.analysis[currentMoveIndex]) {
-      console.warn('currentMoveIndex out of bounds:', currentMoveIndex, 'analysis length:', currentExercise.analysis.length);
+      
       return false;
     }
     const expectedMove = currentExercise.analysis[currentMoveIndex].move;
@@ -203,32 +209,77 @@ const TrainingContainer: React.FC = () => {
   };
 
   // Funkcja do automatycznego wykonywania ruchów startowych
-  const autoPlayStartingMoves = useCallback((exercise: Exercise, maxMoves: number) => {
+  const autoPlayStartingMoves = useCallback((exercise: Exercise, maxFullMoves: number, startFromIndex: number = 0) => {
+    
     const chess = new Chess(exercise.initialFen);
     let idx = 0;
-    while (
-      idx < exercise.analysis.length &&
-      idx < maxMoves
-    ) {
+    let fullMoves = 0;
+    
+
+    
+    // Najpierw wykonaj ruchy do startFromIndex
+    while (idx < startFromIndex && idx < exercise.analysis.length) {
       const move = exercise.analysis[idx]?.move;
       if (!move || ["0-1", "1-0", "*", "½-½"].includes(move)) break;
-      chess.move(move);
-      idx++;
-    }
-    let userColor: 'w' | 'b' = 'w';
-    if (exercise.id === 'KID-black') userColor = 'b';
-    if (chess.turn() !== userColor && idx < exercise.analysis.length) {
-      const move = exercise.analysis[idx]?.move;
-      if (move && !["0-1", "1-0", "*", "½-½"].includes(move)) {
+      
+      try {
         chess.move(move);
         idx++;
+
+      } catch (error) {
+        console.warn(`Error pre-executing move ${move}:`, error);
+        break;
       }
     }
+    
+
+    
+    // Teraz wykonaj automatyczne ruchy od startFromIndex do limitu pełnych ruchów
+    while (
+      idx < exercise.analysis.length &&
+      fullMoves < maxFullMoves
+    ) {
+      const move = exercise.analysis[idx]?.move;
+      if (!move || ["0-1", "1-0", "*", "½-½"].includes(move)) {
+
+        break;
+      }
+      
+
+      
+      // Sprawdź czy ruch jest legalny przed wykonaniem
+      try {
+        const legalMoves = chess.moves({ verbose: true });
+        const isLegal = legalMoves.some(m => m.san === move);
+        
+
+        
+        if (isLegal) {
+          chess.move(move);
+          idx++;
+          if (idx % 2 === 0) fullMoves++; // Liczy pełne ruchy (białe + czarne)
+
+        } else {
+          // Ruch nie jest legalny - zatrzymaj się tutaj
+          console.warn(`Move ${move} is not legal at position ${chess.fen()}`);
+  
+          break;
+        }
+      } catch (error) {
+        // Błąd podczas wykonywania ruchu - zatrzymaj się
+        console.warn(`Error executing move ${move}:`, error);
+        break;
+      }
+    }
+    
+
+    
     setFen(chess.fen());
     setCurrentMoveIndex(idx);
   }, []);
 
   const loadExercise = (exercise: Exercise) => {
+    
     setCurrentExercise(exercise);
     setFen(new Chess(exercise.initialFen).fen());
     setCurrentMoveIndex(0);
@@ -237,24 +288,93 @@ const TrainingContainer: React.FC = () => {
     setUserAnswer("");
     setScore(0);
     setTotalMoves(exercise.analysis.length);
-    if (exercise.id === 'KID-black') {
+    
+    if (exercise.color === 'black' || exercise.id === 'KID-black') {
+
       setBoardOrientation('black');
+      
+      // Sprawdź czy pierwszy ruch należy do białych czy czarnych
       const chess = new Chess(exercise.initialFen);
       const firstMove = exercise.analysis[0]?.move;
-      if (firstMove) {
-        chess.move(firstMove);
+      
+
+      
+      if (firstMove && !["0-1", "1-0", "*", "½-½"].includes(firstMove)) {
+        // Sprawdź czy pierwszy ruch jest legalny dla białych
+        if (isWhiteMove(chess, firstMove)) {
+
+          // Pierwszy ruch należy do białych - wykonaj go automatycznie
+          chess.move(firstMove);
+          setFen(chess.fen());
+          setCurrentMoveIndex(1);
+          
+          // Sprawdź czy włączono automatyczne ruchy startowe
+          if (autoStartingMoves) {
+            const movesLimitNum = parseInt(autoMovesLimit);
+            if (!isNaN(movesLimitNum) && movesLimitNum > 0) {
+              // Kontynuuj automatyczne ruchy od pozycji po pierwszym ruchu białych
+              // Używamy pełnej liczby ruchów, bo funkcja autoPlayStartingMoves teraz liczy pełne ruchy
+
+              autoPlayStartingMoves(
+                exercise,
+                movesLimitNum,
+                1 // Startuj od indeksu 1 (po pierwszym ruchu białych)
+              );
+              return;
+            }
+          }
+        } else {
+
+          // Pierwszy ruch należy do czarnych - użytkownik zaczyna
+          setFen(chess.fen());
+          setCurrentMoveIndex(0);
+          
+          // Sprawdź czy włączono automatyczne ruchy startowe
+          if (autoStartingMoves) {
+            const movesLimitNum = parseInt(autoMovesLimit);
+            if (!isNaN(movesLimitNum) && movesLimitNum > 0) {
+
+              autoPlayStartingMoves(
+                exercise,
+                movesLimitNum,
+                0 // Startuj od początku
+              );
+              return;
+            }
+          }
+        }
+      } else {
+
+        // Brak ruchów lub nieprawidłowy ruch
         setFen(chess.fen());
-        setCurrentMoveIndex(1);
+        setCurrentMoveIndex(0);
+        
+        // Sprawdź czy włączono automatyczne ruchy startowe
+        if (autoStartingMoves) {
+          const movesLimitNum = parseInt(autoMovesLimit);
+          if (!isNaN(movesLimitNum) && movesLimitNum > 0) {
+            
+            autoPlayStartingMoves(
+              exercise,
+              movesLimitNum,
+              0 // Startuj od początku
+            );
+            return;
+          }
+        }
       }
     } else {
+
       setBoardOrientation('white');
+      // Automatyczne ruchy startowe (jeśli wybrano)
       if (autoStartingMoves) {
         const movesLimitNum = parseInt(autoMovesLimit);
         if (!isNaN(movesLimitNum) && movesLimitNum > 0) {
-          const maxMovesNum = movesLimitNum * 2;
+
           autoPlayStartingMoves(
             exercise,
-            maxMovesNum
+            movesLimitNum,
+            0 // Startuj od początku
           );
           return;
         }
@@ -310,12 +430,11 @@ const TrainingContainer: React.FC = () => {
           </div>
           <div className="w-full px-1">
             <div className="flex flex-row gap-4 max-w-[1400px] mx-auto">
-              <ExerciseList
-                exercises={exercises}
-                currentExercise={currentExercise}
-                onSelect={loadExercise}
-                onRandom={loadRandomExercise}
-              />
+                             <ExerciseList
+                 exercises={exercises}
+                 currentExercise={currentExercise}
+                 onSelect={loadExercise}
+               />
               <TrainingBoard
                 fen={fen}
                 boardHighlight={boardHighlight}

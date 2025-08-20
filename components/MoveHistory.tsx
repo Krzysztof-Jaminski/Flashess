@@ -66,7 +66,7 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory,
               className={isActive ? "font-bold cursor-pointer" : "cursor-pointer hover:text-cyan-300"}
               style={isActive ? { color: 'var(--blue-84)' } : {}}
               onClick={() => {
-                console.log('Kliknięto wiersz historii', { idx, moveIdx, historyIndex });
+            
                 if (onGoToMove) onGoToMove(moveIdx);
               }}
               title={`Pokaż pozycję po ruchu ${line}`}

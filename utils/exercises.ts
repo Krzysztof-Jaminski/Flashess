@@ -68,7 +68,7 @@ export function getCustomExercises(): Exercise[] {
         isCritical: false 
       }));
       
-      return {
+      const exercise: Exercise = {
         id: ex.id,
         name: ex.name,
         initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', // Proper FEN for starting position
@@ -78,6 +78,8 @@ export function getCustomExercises(): Exercise[] {
         // Dodaj informację o kolorze dla ćwiczeń z custom color
         color: ex.color || 'white',
       };
+      
+      return exercise;
     });
   } catch (error) {
     console.error('Error parsing custom exercises:', error);
@@ -87,24 +89,55 @@ export function getCustomExercises(): Exercise[] {
 
 export function getExercises(): Exercise[] {
   const seen = new Set<string>();
-  const deduped: any[] = [];
+  const deduped: Exercise[] = [];
+  
   for (const ex of exercisesData as any[]) {
-    const norm = normalizeMoves(ex.pgn, 2); // ignore last 2 moves for similarity
+    // Użyj kombinacji ruchów i koloru do deduplikacji
+    const norm = normalizeMoves(ex.pgn, 2) + '|' + (ex.color || 'white');
     if (!seen.has(norm)) {
       seen.add(norm);
+      
       let moves = ex.pgn.includes("[")
         ? normalizeMoves(ex.pgn, 0).split(" ")
         : ex.pgn.replace(/\d+\./g, "").trim().split(/\s+/).filter(Boolean);
-      deduped.push({
+      
+      // Sprawdź czy ćwiczenie ma poprawną pozycję początkową
+      let validFen = ex.initialFen;
+      try {
+        const chess = new Chess(ex.initialFen);
+        validFen = chess.fen();
+        
+        // Sprawdź czy pierwszy ruch jest legalny
+        if (moves.length > 0) {
+          const firstMove = moves[0];
+          const legalMoves = chess.moves({ verbose: true });
+          const isLegal = legalMoves.some(m => m.san === firstMove);
+          
+          if (!isLegal) {
+            // Jeśli pierwszy ruch nie jest legalny, może to oznaczać że ćwiczenie ma nieprawidłową pozycję początkową
+            // Na razie po prostu kontynuujemy
+          }
+        }
+      } catch (error) {
+        // Użyj standardowej pozycji początkowej
+        validFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+      }
+      
+      const exercise: Exercise = {
         id: ex.id,
         name: ex.name,
-        initialFen: ex.initialFen,
+        initialFen: validFen,
         analysis: moves.map((move: string) => ({ move, evaluation: 0, isCritical: false })),
         createdAt: new Date().toISOString(),
         maxMoves: ex.maxMoves,
-      });
+        // Użyj kolor z pliku JSON, a jeśli nie ma to sprawdź ID
+        color: ex.color || (ex.id.includes('black') ? 'black' : 'white'),
+      };
+      
+      deduped.push(exercise);
     }
   }
+  
   // Dodaj customowe ćwiczenia z localStorage (jeśli jesteśmy w przeglądarce)
   let custom: Exercise[] = [];
   if (typeof window !== 'undefined') {
@@ -112,5 +145,7 @@ export function getExercises(): Exercise[] {
       custom = getCustomExercises();
     } catch {}
   }
-  return [...deduped, ...custom];
+  
+  const result = [...deduped, ...custom];
+  return result;
 } 
