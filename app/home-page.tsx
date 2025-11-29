@@ -28,7 +28,7 @@ const HomePage: NextPage = () => {
 
   const handlePing = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/ChessPreparation/ping");
+      const res = await fetch("https://flashess-api-67236.azurewebsites.net/api/ChessPreparation/ping");
       const text = await res.text();
       setPingResult(text);
     } catch (e) {

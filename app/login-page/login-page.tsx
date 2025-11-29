@@ -1,13 +1,18 @@
 "use client";
 import type { NextPage } from "next";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Buttons from "../../components/buttons";
 import TopBar from "../../components/topbar";
+import { authApi } from "../../utils/api";
 
 const LoginPage: NextPage = () => {
   const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const onTopBarContainerClick = useCallback(() => {
     router.push("/register-page");
@@ -24,6 +29,25 @@ const LoginPage: NextPage = () => {
   const onHOMETextClick = useCallback(() => {
     router.push("/");
   }, [router]);
+
+  const handleLogin = useCallback(async () => {
+    if (!username || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    const response = await authApi.login(username, password);
+    if (response.success) {
+      router.push("/");
+    } else {
+      setError(response.error);
+    }
+    
+    setLoading(false);
+  }, [username, password, router]);
 
   return (
     <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
@@ -98,10 +122,20 @@ const LoginPage: NextPage = () => {
               <h2 className="text-2xl mb-6">Login</h2>
               
               <div className="space-y-4">
+                {error && (
+                  <div className="w-full p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 text-sm">
+                    {error}
+                  </div>
+                )}
                 <div className="w-full">
                   <input
                     type="text"
                     placeholder="Username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                    autoComplete="username"
+                    suppressHydrationWarning
                     className="w-full px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
                   />
                 </div>
@@ -109,6 +143,11 @@ const LoginPage: NextPage = () => {
                   <input
                     type="password"
                     placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                    autoComplete="current-password"
+                    suppressHydrationWarning
                     className="w-full px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
                   />
                 </div>
@@ -126,9 +165,10 @@ const LoginPage: NextPage = () => {
                   logInButtonMarginTop="unset"
                   logInButtonHeight="3rem"
                   logInButtonWidth="100%"
-                  bUTTON="LOG IN"
+                  bUTTON={loading ? "LOGGING IN..." : "LOG IN"}
                   bUTTONColor="#fff"
                   bUTTONTextShadow="unset"
+                  onLogInButtonContainerClick={handleLogin}
                 />
               </div>
             </div>

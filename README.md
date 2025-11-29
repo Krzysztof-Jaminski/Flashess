@@ -10,6 +10,16 @@ Flashess is a comprehensive chess training application built with Next.js, React
 - **Creation Page**: Create and manage custom chess exercises
 - **Opening Tree**: Comprehensive opening theory with variations
 
+### 🔐 User Authentication
+- **Registration**: Create new user accounts
+- **Login**: Secure JWT-based authentication
+- **User Profiles**: Manage your exercises across devices
+
+### 💾 Data Storage
+- **Local Storage**: Exercises always saved locally (works offline)
+- **Backend Sync**: Optional cloud sync when logged in
+- **Public Exercises**: Share your exercises with the community
+
 ### 🏗️ Creation Mode
 - **Custom Exercise Builder**: Create exercises from PGN notation
 - **Opening Tree Integration**: Real-time opening theory suggestions
@@ -33,10 +43,11 @@ The opening tree provides:
 ## Technical Stack
 
 - **Frontend**: Next.js 14, React 18, TypeScript
+- **Backend**: .NET 9.0 Web API with Entity Framework Core (separate repository)
 - **Styling**: Tailwind CSS with custom design system
 - **Chess Engine**: chess.js for game logic
 - **Board Component**: react-chessboard for chess visualization
-- **State Management**: React hooks and local storage
+- **State Management**: React hooks, local storage, and backend API
 
 ## Project Structure
 
@@ -45,14 +56,18 @@ Flashess/
 ├── app/                    # Next.js app directory
 │   ├── creation-page/     # Exercise creation interface
 │   ├── training-page/     # Training mode interface
+│   ├── login-page/        # User login
+│   ├── register-page/     # User registration
 │   └── layout.tsx         # Root layout
 ├── components/            # Reusable React components
 │   ├── OpeningTree.tsx   # Opening tree component
 │   ├── TrainingBoard.tsx # Chess training board
 │   └── ...               # Other components
 ├── utils/                 # Utility functions and data
-│   ├── openings.json     # Opening database
-│   ├── openings.ts       # Opening tree logic
+│   ├── api.ts            # Backend API client
+│   ├── apiConfig.ts      # Backend API configuration
+│   ├── exercises.json    # Opening database
+│   ├── exercises.ts      # Exercise logic
 │   └── ...               # Other utilities
 └── public/               # Static assets
 ```
@@ -64,17 +79,18 @@ Flashess/
 - npm or yarn
 
 ### Installation
-```bash
-# Clone the repository
-git clone <repository-url>
-cd Flashess
 
+```bash
 # Install dependencies
 npm install
 
 # Run development server
 npm run dev
 ```
+
+Frontend będzie dostępny na `http://localhost:3000`.
+
+**Note**: Backend is in a separate repository. See the backend repository for setup instructions. The frontend works with local storage even without the backend.
 
 ### Usage
 
@@ -94,6 +110,9 @@ npm run dev
 - **PGN Input**: Paste standard chess notation
 - **Move History**: Track your analysis progress
 - **Exercise Management**: Save, load, and delete custom exercises
+- **Local Storage**: Exercises are always saved locally
+- **Backend Sync**: When logged in, exercises are also saved to backend
+- **Public Exercises**: Option to make exercises public for all users
 
 ## Opening Database
 

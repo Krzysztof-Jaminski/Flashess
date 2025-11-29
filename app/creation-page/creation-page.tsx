@@ -9,7 +9,8 @@ import type { Square } from "chess.js";
 import { API_BASE_URL } from "../../utils/apiConfig";
 import AppNumberInput from "../../components/AppNumberInput";
 import { getVisionOverlays } from "../../components/VisionMode";
-import { getExercises } from "../../utils/exercises";
+import { getExercises, getCustomExercises, type Exercise } from "../../utils/exercises";
+import { exercisesApi, authApi } from "../../utils/api";
 
 
 
@@ -45,6 +46,7 @@ const CreationPage: NextPage = () => {
   const [customPGN, setCustomPGN] = useState("");
   const [customColor, setCustomColor] = useState<'white'|'black'>('white');
   const [customError, setCustomError] = useState<string>("");
+  const [isPublic, setIsPublic] = useState(false);
   const [historyIndex, setHistoryIndex] = useState<number | null>(null);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const boardRef = useRef<any>(null);
@@ -242,12 +244,13 @@ const CreationPage: NextPage = () => {
     return true;
   };
 
-  const handleAddCustomExercise = () => {
+  const handleAddCustomExercise = async () => {
     setCustomError("");
+    
     // Walidacja: PGN musi zaczynać się od pozycji startowej
     const pgn = customPGN.trim();
     if (!/^1\./.test(pgn)) {
-      setCustomError("");
+      setCustomError("Invalid PGN format");
       return;
     }
     // Spróbuj sparsować PGN
@@ -256,64 +259,97 @@ const CreationPage: NextPage = () => {
       chess = new Chess();
       chess.loadPgn(pgn);
     } catch (e) {
-      setCustomError("");
+      setCustomError("Invalid PGN");
       return;
     }
-    // Zapisz do localStorage
+    
+    // Zawsze zapisz lokalnie
     const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
     const newExercise = {
       id: 'custom-' + Date.now(),
-      name: exerciseName.trim(),
-      initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', // Proper FEN for starting position
+      name: exerciseName.trim() || "Exercise " + Date.now(),
+      initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       pgn,
       color: customColor,
       createdAt: new Date().toISOString(),
+      isPublic: false, // localStorage nie obsługuje publicznych
     };
     customExercises.push(newExercise);
     localStorage.setItem('customExercises', JSON.stringify(customExercises));
+    
+    // Jeśli użytkownik jest zalogowany, zapisz również do backendu (cicho, bez błędów)
+    if (authApi.isAuthenticated()) {
+      await exercisesApi.create({
+        name: exerciseName.trim() || "Exercise " + Date.now(),
+        initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        pgn,
+        color: customColor,
+        isPublic: isPublic,
+      });
+      // Nie pokazujemy błędu jeśli się nie uda - lokalne zapisanie się udało
+    }
+    
     setCustomPGN("");
     setExerciseName("");
+    setIsPublic(false);
+    
     // Refresh the custom exercises list
-    setCustomExercises(customExercises);
+    await loadCustomExercises();
     
     // Dodaj zieloną obwódkę i odśwież popular moves
     setHighlightButton(true);
-    setRefreshTrigger(prev => prev + 1); // Wymuś re-render popular moves
-    setTimeout(() => setHighlightButton(false), 2000); // Usuń po 2 sekundach
+    setRefreshTrigger(prev => prev + 1);
+    setTimeout(() => setHighlightButton(false), 2000);
   };
 
   // Function to add current board history as exercise
-  const handleAddCurrentHistory = () => {
+  const handleAddCurrentHistory = async () => {
     setCustomError("");
     
     if (moveHistory.length === 0) {
-      setCustomError("");
+      setCustomError("No moves to save");
       return;
     }
 
     // Generuj PGN bez nagłówków - tylko ruchy
     const cleanPgn = moveHistory.join(" ");
 
-    // Zapisz do localStorage
+    // Zawsze zapisz lokalnie
     const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
     const newExercise = {
       id: 'custom-' + Date.now(),
-      name: exerciseName.trim(),
-      initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', // Proper FEN for starting position
+      name: exerciseName.trim() || "Exercise " + Date.now(),
+      initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       pgn: cleanPgn,
       color: customColor,
       createdAt: new Date().toISOString(),
+      isPublic: false, // localStorage nie obsługuje publicznych
     };
     customExercises.push(newExercise);
     localStorage.setItem('customExercises', JSON.stringify(customExercises));
+    
+    // Jeśli użytkownik jest zalogowany, zapisz również do backendu (cicho, bez błędów)
+    if (authApi.isAuthenticated()) {
+      await exercisesApi.create({
+        name: exerciseName.trim() || "Exercise " + Date.now(),
+        initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        pgn: cleanPgn,
+        color: customColor,
+        isPublic: isPublic,
+      });
+      // Nie pokazujemy błędu jeśli się nie uda - lokalne zapisanie się udało
+    }
+    
     setExerciseName("");
+    setIsPublic(false);
+    
     // Refresh the custom exercises list
-    setCustomExercises(customExercises);
+    await loadCustomExercises();
     
     // Dodaj zieloną obwódkę i odśwież popular moves
     setHighlightButton(true);
-    setRefreshTrigger(prev => prev + 1); // Wymuś re-render popular moves
-    setTimeout(() => setHighlightButton(false), 2000); // Usuń po 2 sekundach
+    setRefreshTrigger(prev => prev + 1);
+    setTimeout(() => setHighlightButton(false), 2000);
   };
 
   // Function to preview PGN on the board
@@ -339,33 +375,98 @@ const CreationPage: NextPage = () => {
     try {
       const chess = new Chess();
       if (exercise.pgn) {
-        chess.loadPgn(exercise.pgn);
+        // If PGN doesn't start with "1.", add it for proper parsing
+        let pgnToLoad = exercise.pgn;
+        if (!pgnToLoad.startsWith('1.')) {
+          // Try to format as proper PGN
+          const moves = pgnToLoad.split(' ').filter((m: string) => m);
+          let formattedPgn = '';
+          for (let i = 0; i < moves.length; i += 2) {
+            const moveNum = Math.floor(i / 2) + 1;
+            const white = moves[i] || '';
+            const black = moves[i + 1] || '';
+            formattedPgn += `${moveNum}. ${white} ${black} `.trim() + ' ';
+          }
+          pgnToLoad = formattedPgn.trim();
+        }
+        chess.loadPgn(pgnToLoad);
       }
       setGame(chess);
       setMoveHistory(chess.history());
       setHistoryIndex(chess.history().length);
       setCustomPGN(exercise.pgn || "");
       setCustomColor(exercise.color || 'white');
+      setIsPublic(exercise.isPublic || false);
       
       // Reset selected move when loading new exercise
       setSelectedMove(null);
     } catch (e) {
-      setCustomError("");
+      setCustomError("Failed to load exercise");
     }
   };
 
   // Function to delete custom exercise
-  const deleteCustomExercise = (exerciseId: string) => {
-    const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
-    const filtered = customExercises.filter((ex: any) => ex.id !== exerciseId);
-    localStorage.setItem('customExercises', JSON.stringify(filtered));
-    setCustomError("");
-    // Refresh the custom exercises list
-    setCustomExercises(filtered);
+  const deleteCustomExercise = async (exerciseId: string | number) => {
+    // Jeśli to lokalne ćwiczenie (string ID)
+    if (typeof exerciseId === 'string' && exerciseId.startsWith('custom-')) {
+      const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
+      const filtered = customExercises.filter((ex: any) => ex.id !== exerciseId);
+      localStorage.setItem('customExercises', JSON.stringify(filtered));
+      setCustomExercises(filtered);
+    } else if (typeof exerciseId === 'number') {
+      // Jeśli to ćwiczenie z backendu - usuń lokalnie i spróbuj z backendu (cicho)
+      const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
+      const filtered = customExercises.filter((ex: any) => ex.id !== exerciseId);
+      localStorage.setItem('customExercises', JSON.stringify(filtered));
+      setCustomExercises(filtered);
+      
+      // Spróbuj usunąć z backendu (cicho, bez błędów)
+      if (authApi.isAuthenticated()) {
+        await exercisesApi.delete(exerciseId);
+      }
+      await loadCustomExercises();
+    }
+  };
+  
+  // Function to load custom exercises from both localStorage and backend
+  const loadCustomExercises = async () => {
+    const allExercises: any[] = [];
+    
+    // Załaduj WSZYSTKIE ćwiczenia z localStorage (wspólne dla urządzenia, niezależnie od użytkownika)
+    try {
+      const localExercisesRaw = JSON.parse(localStorage.getItem('customExercises') || '[]');
+      // Upewnij się, że wszystkie ćwiczenia są załadowane - każda gra to oddzielne ćwiczenie
+      if (Array.isArray(localExercisesRaw) && localExercisesRaw.length > 0) {
+        // Dodaj wszystkie ćwiczenia z localStorage
+        allExercises.push(...localExercisesRaw);
+      }
+    } catch (e) {
+      // Cicho obsłuż błąd
+      console.warn('Error loading local exercises:', e);
+    }
+    
+    // Załaduj WSZYSTKIE ćwiczenia z backendu dla zalogowanego użytkownika
+    if (authApi.isAuthenticated()) {
+      try {
+        const backendExercises = await exercisesApi.getMyExercises();
+        if (backendExercises && Array.isArray(backendExercises) && backendExercises.length > 0) {
+          // Dodaj wszystkie ćwiczenia z backendu (każda gra to oddzielne ćwiczenie)
+          // Nie sprawdzamy duplikatów - pokazujemy wszystkie
+          allExercises.push(...backendExercises);
+        }
+      } catch (e) {
+        // Cicho obsłuż błąd backendu
+      }
+    }
+    
+    // Ustaw wszystkie ćwiczenia (lokalne + z serwera)
+    setCustomExercises(allExercises);
   };
 
   // Load custom exercises for display
   const [customExercises, setCustomExercises] = useState<any[]>([]);
+  const [publicExercises, setPublicExercises] = useState<any[]>([]);
+  const [studyGames, setStudyGames] = useState<Exercise[]>([]);
   const [showCustomExercises, setShowCustomExercises] = useState(false);
   const [highlightButton, setHighlightButton] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -373,16 +474,37 @@ const CreationPage: NextPage = () => {
 
   useEffect(() => {
     setIsClient(true);
-    const loadCustomExercises = () => {
-      try {
-        const exercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
-        setCustomExercises(exercises);
-      } catch (e) {
-        setCustomExercises([]);
+    
+    // Załaduj study games tylko po stronie klienta (unika problemu hydratacji)
+    const loadedStudyGames = getExercises();
+    setStudyGames(loadedStudyGames);
+    
+    loadCustomExercises();
+    
+    // Load public exercises from backend (cicho, bez błędów)
+    const loadPublicExercises = async () => {
+      const publicExercises = await exercisesApi.getPublicExercises();
+      if (publicExercises && publicExercises.length > 0) {
+        setPublicExercises(publicExercises);
       }
     };
-    loadCustomExercises();
+    loadPublicExercises();
   }, []);
+
+  // Odśwież ćwiczenia gdy strona jest widoczna
+  useEffect(() => {
+    if (!isClient) return;
+    
+    // Odśwież ćwiczenia natychmiast
+    loadCustomExercises();
+    
+    // Odśwież co 3 sekundy (aby złapać zmiany w localStorage i autentykacji)
+    const interval = setInterval(() => {
+      loadCustomExercises();
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, [isClient]);
 
   // Auto-preview PGN when it changes
   useEffect(() => {
@@ -524,7 +646,7 @@ const CreationPage: NextPage = () => {
                   />
                 </div>
 
-                <div className="flex items-center gap-6 mb-5">
+                <div className="flex items-center gap-6 mb-3">
                   <label className="text-white/80 text-sm">Training color:</label>
                   <label className="flex items-center gap-4 cursor-pointer select-none">
                     <input type="radio" checked={customColor==='white'} onChange={()=>setCustomColor('white')} className="hidden" />
@@ -535,6 +657,19 @@ const CreationPage: NextPage = () => {
                     <input type="radio" checked={customColor==='black'} onChange={()=>setCustomColor('black')} className="hidden" />
                     <ColorDot color="black" selected={customColor==='black'} />
                     <span className="text-white/80 text-xs ml-1">Black</span>
+                  </label>
+                </div>
+                
+                <div className="flex items-center gap-3 mb-5">
+                  <input
+                    type="checkbox"
+                    id="isPublic"
+                    checked={isPublic}
+                    onChange={(e) => setIsPublic(e.target.checked)}
+                    className="w-4 h-4 rounded border-white/30 bg-white/10 text-cyan-400 focus:ring-cyan-400"
+                  />
+                  <label htmlFor="isPublic" className="text-white/80 text-sm cursor-pointer">
+                    Make this exercise public
                   </label>
                 </div>
 
@@ -588,15 +723,15 @@ const CreationPage: NextPage = () => {
                 
                 
                 <div className="space-y-2">
-
-                  
                   {/* Popular Moves from Study Database + User Exercises */}
-                  {(() => {
-                    // Pobierz bazę gier study z exercises.json
-                    const studyGames = getExercises();
-                    
-                    // Dodaj ćwiczenia użytkownika do bazy study tylko po stronie klienta
-                    const allGames = [...studyGames, ...(isClient ? customExercises : [])];
+                  {isClient ? (() => {
+                    // Użyj studyGames z state (załadowane po hydratacji)
+                    // Dodaj ćwiczenia użytkownika i publiczne ćwiczenia z backendu
+                    const allGames = [
+                      ...studyGames, 
+                      ...customExercises,
+                      ...publicExercises
+                    ];
                     
                     // refreshTrigger wymusza re-render gdy dodamy nowe ćwiczenie
                     const _ = refreshTrigger;
@@ -731,47 +866,80 @@ const CreationPage: NextPage = () => {
                         </div>
                       </div>
                     ));
-                  })()}
+                  })() : <div className="text-xs text-white/60">Loading exercises...</div>}
                   
-                  {/* Custom Exercises Section */}
-                  {isClient && customExercises.length > 0 && (
+                  {/* Custom Exercises Section - pokazuje wszystkie: lokalne (urządzenie) + z serwera (użytkownik) */}
+                  {isClient && (
                     <div className="mt-6">
-                      <button
-                        onClick={() => setShowCustomExercises(!showCustomExercises)}
-                        className={`w-full p-3 bg-white/10 border rounded-lg hover:bg-white/15 transition-all duration-200 flex items-center justify-between ${
-                          highlightButton 
-                            ? 'border-green-400 shadow-lg shadow-green-400/20' 
-                            : 'border-white/20'
-                        }`}
-                      >
-                        <span className="text-sm font-bold text-white">
-                          Your Custom Exercises ({customExercises.length})
-                        </span>
-                        <span className="text-white">
-                          {showCustomExercises ? '▼' : '▶'}
-                        </span>
-                      </button>
+                      <div className="flex items-center gap-2 mb-2">
+                        <button
+                          onClick={() => setShowCustomExercises(!showCustomExercises)}
+                          className={`flex-1 p-3 bg-white/10 border rounded-lg hover:bg-white/15 transition-all duration-200 flex items-center justify-between ${
+                            highlightButton 
+                              ? 'border-green-400 shadow-lg shadow-green-400/20' 
+                              : 'border-white/20'
+                          }`}
+                        >
+                          <span className="text-sm font-bold text-white">
+                            Your Custom Exercises ({customExercises.length})
+                          </span>
+                          <span className="text-white">
+                            {showCustomExercises ? '▼' : '▶'}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => loadCustomExercises()}
+                          className="px-3 py-3 bg-white/10 border border-white/20 rounded-lg hover:bg-white/15 transition-all duration-200 text-white text-sm"
+                          title="Refresh exercises"
+                        >
+                          ↻
+                        </button>
+                      </div>
                       
                       {showCustomExercises && (
                         <div className="mt-3 space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                          {customExercises.map((exercise) => (
-                            <div key={exercise.id} className="flex items-center justify-between p-2 bg-white/5 rounded border border-white/10">
-                              <div 
-                                className="flex-1 cursor-pointer hover:bg-white/10 transition-colors p-1 rounded"
-                                onClick={() => loadExerciseToBoard(exercise)}
-                              >
-                                <div className="text-sm font-bold text-white">{exercise.name}</div>
-                                <div className="text-xs text-white/60">{exercise.color} to play</div>
-                              </div>
-                              <button
-                                onClick={() => deleteCustomExercise(exercise.id)}
-                                className="ml-2 px-2 py-1 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-xs hover:bg-red-500/30 transition-colors"
-                              >
-                                Delete
-                              </button>
-                    </div>
-                  ))}
-                      </div>
+                          {customExercises.length === 0 ? (
+                            <div className="text-xs text-white/60 p-2">No exercises yet. Create one above!</div>
+                          ) : (
+                            customExercises.map((exercise) => {
+                              // Określ typ ćwiczenia
+                              const isLocal = typeof exercise.id === 'string' && exercise.id.startsWith('custom-');
+                              const isBackend = typeof exercise.id === 'number';
+                              const isPublic = isBackend && exercise.isPublic === true;
+                              const isPrivate = isBackend && exercise.isPublic === false;
+                              
+                              let statusBadge = null;
+                              if (isLocal) {
+                                statusBadge = <span className="ml-2 text-yellow-400 text-xs">(Lokalne)</span>;
+                              } else if (isPublic) {
+                                statusBadge = <span className="ml-2 text-cyan-400 text-xs">(Publiczne)</span>;
+                              } else if (isPrivate) {
+                                statusBadge = <span className="ml-2 text-gray-400 text-xs">(Prywatne)</span>;
+                              }
+                              
+                              return (
+                                <div key={exercise.id} className="flex items-center justify-between p-2 bg-white/5 rounded border border-white/10">
+                                  <div 
+                                    className="flex-1 cursor-pointer hover:bg-white/10 transition-colors p-1 rounded"
+                                    onClick={() => loadExerciseToBoard(exercise)}
+                                  >
+                                    <div className="text-sm font-bold text-white">{exercise.name}</div>
+                                    <div className="text-xs text-white/60">
+                                      {exercise.color || 'white'} to play
+                                      {statusBadge}
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => deleteCustomExercise(exercise.id)}
+                                    className="ml-2 px-2 py-1 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-xs hover:bg-red-500/30 transition-colors"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
                       )}
                     </div>
                   )}

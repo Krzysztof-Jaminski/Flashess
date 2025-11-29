@@ -1,9 +1,10 @@
 "use client";
 import type { NextPage } from "next";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import Buttons from "./buttons";
+import { authApi, getCurrentUser, type User } from "../utils/api";
 
 export type TopBarType = {
   className?: string;
@@ -13,6 +14,32 @@ const TopBar: NextPage<TopBarType> = ({ className = "" }) => {
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // Aktualizuj stan autentykacji po hydratacji
+  useEffect(() => {
+    setIsMounted(true);
+    const updateAuth = () => {
+      setIsAuthenticated(authApi.isAuthenticated());
+      setCurrentUser(getCurrentUser());
+    };
+    
+    // Ustaw początkowy stan po hydratacji
+    updateAuth();
+    
+    // Nasłuchuj zmian w localStorage (działa między kartami)
+    window.addEventListener('storage', updateAuth);
+    
+    // Nasłuchuj custom event dla zmian w tej samej karcie
+    window.addEventListener('auth-change', updateAuth);
+    
+    return () => {
+      window.removeEventListener('storage', updateAuth);
+      window.removeEventListener('auth-change', updateAuth);
+    };
+  }, []);
 
   const handleLogInClick = useCallback(() => {
     router.push("/login-page");
@@ -36,6 +63,12 @@ const TopBar: NextPage<TopBarType> = ({ className = "" }) => {
 
   const handleRegisterClick = useCallback(() => {
     router.push("/register-page");
+    setIsMenuOpen(false);
+  }, [router]);
+
+  const handleLogout = useCallback(() => {
+    authApi.logout();
+    router.push("/");
     setIsMenuOpen(false);
   }, [router]);
 
@@ -126,18 +159,34 @@ const TopBar: NextPage<TopBarType> = ({ className = "" }) => {
 
         {/* Right section - visible on desktop */}
         <div className="hidden xl:flex items-center gap-10 z-[2]">
-          <Buttons
-            property1="Default"
-            onLogInButtonContainerClick={handleRegisterClick}
-            bUTTON="PROFILE"
-            className="flex-shrink-0 px-4 transition-all duration-150"
-          />
-          <Buttons
-            property1="Default"
-            onLogInButtonContainerClick={handleLogInClick}
-            bUTTON="LOG IN"
-            className="flex-shrink-0 px-4 transition-all duration-150"
-          />
+          {isAuthenticated ? (
+            <>
+              <div className="text-white text-sm">
+                <span className="text-cyan-400">Logged in as:</span> {currentUser?.username || 'User'}
+              </div>
+              <Buttons
+                property1="Default"
+                onLogInButtonContainerClick={handleLogout}
+                bUTTON="LOG OUT"
+                className="flex-shrink-0 px-4 transition-all duration-150"
+              />
+            </>
+          ) : (
+            <>
+              <Buttons
+                property1="Default"
+                onLogInButtonContainerClick={handleRegisterClick}
+                bUTTON="PROFILE"
+                className="flex-shrink-0 px-4 transition-all duration-150"
+              />
+              <Buttons
+                property1="Default"
+                onLogInButtonContainerClick={handleLogInClick}
+                bUTTON="LOG IN"
+                className="flex-shrink-0 px-4 transition-all duration-150"
+              />
+            </>
+          )}
         </div>
 
         {/* Mobile menu button */}
@@ -171,18 +220,35 @@ const TopBar: NextPage<TopBarType> = ({ className = "" }) => {
             >
               CREATION
             </div>
-            <div
-              className={getLinkClassName("/register-page")}
-              onClick={handleRegisterClick}
-            >
-              PROFILE
-            </div>
-            <div
-              className={getLinkClassName("/login-page")}
-              onClick={handleLogInClick}
-            >
-              LOG IN
-            </div>
+            {isAuthenticated ? (
+              <>
+                <div className="text-white text-xs text-center px-2">
+                  <span className="text-cyan-400">Logged in:</span><br />
+                  {currentUser?.username || 'User'}
+                </div>
+                <div
+                  className="text-White font-['Russo_One'] cursor-pointer hover:text-cyan-400"
+                  onClick={handleLogout}
+                >
+                  LOG OUT
+                </div>
+              </>
+            ) : (
+              <>
+                <div
+                  className={getLinkClassName("/register-page")}
+                  onClick={handleRegisterClick}
+                >
+                  PROFILE
+                </div>
+                <div
+                  className={getLinkClassName("/login-page")}
+                  onClick={handleLogInClick}
+                >
+                  LOG IN
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

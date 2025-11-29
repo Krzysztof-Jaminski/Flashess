@@ -1,5 +1,6 @@
 import exercisesData from './exercises.json';
 import { Chess } from 'chess.js';
+import { exercisesApi } from './api';
 
 export interface AnalysisMove {
   move: string;
@@ -83,6 +84,45 @@ export function getCustomExercises(): Exercise[] {
     });
   } catch (error) {
     console.error('Error parsing custom exercises:', error);
+    return [];
+  }
+}
+
+export async function getPublicExercisesFromBackend(): Promise<Exercise[]> {
+  if (typeof window === 'undefined') return [];
+  
+  try {
+    const publicExercises = await exercisesApi.getPublicExercises();
+    return publicExercises.map((ex: any) => {
+      let moves: string[] = [];
+      if (ex.pgn) {
+        if (ex.pgn.includes('.')) {
+          const cleanPgn = ex.pgn
+            .replace(/\[[^\]]*\]/g, "")
+            .replace(/\{[^}]*\}/g, "")
+            .replace(/\([^)]*\)/g, "")
+            .replace(/\d+\./g, "")
+            .replace(/\d+-\d+|1-0|0-1|1\/2-1\/2|\*/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+          moves = cleanPgn.split(" ").filter(Boolean);
+        } else {
+          moves = ex.pgn.split(" ").filter(Boolean);
+        }
+      }
+      
+      return {
+        id: `backend-${ex.id}`,
+        name: ex.name,
+        initialFen: ex.initialFen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        analysis: moves.map((move: string) => ({ move, evaluation: 0, isCritical: false })),
+        createdAt: ex.createdAt,
+        maxMoves: undefined,
+        color: ex.color || 'white',
+      };
+    });
+  } catch (error) {
+    console.error('Error loading public exercises from backend:', error);
     return [];
   }
 }

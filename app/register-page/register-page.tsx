@@ -1,13 +1,20 @@
 "use client";
 import type { NextPage } from "next";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Buttons from "../../components/buttons";
 import TopBar from "../../components/topbar";
+import { authApi } from "../../utils/api";
 
 const RegisterPage: NextPage = () => {
   const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const onLogInButtonContainerClick = useCallback(() => {
     router.push("/login-page");
@@ -24,6 +31,35 @@ const RegisterPage: NextPage = () => {
   const onCREATIONTextClick = useCallback(() => {
     router.push("/creation-page");
   }, [router]);
+
+  const handleRegister = useCallback(async () => {
+    if (!username || !email || !password || !confirmPassword) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    const response = await authApi.register(username, email, password);
+    if (response.success) {
+      router.push("/");
+    } else {
+      setError(response.error);
+    }
+    
+    setLoading(false);
+  }, [username, email, password, confirmPassword, router]);
 
   return (
     <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
@@ -101,10 +137,20 @@ const RegisterPage: NextPage = () => {
               <h2 className="text-2xl mb-6">Create Account</h2>
               
               <div className="space-y-4">
+                {error && (
+                  <div className="w-full p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 text-sm">
+                    {error}
+                  </div>
+                )}
                 <div className="w-full">
                   <input
                     type="text"
                     placeholder="Username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+                    autoComplete="username"
+                    suppressHydrationWarning
                     className="w-full px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
                   />
                 </div>
@@ -112,6 +158,11 @@ const RegisterPage: NextPage = () => {
                   <input
                     type="email"
                     placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+                    autoComplete="email"
+                    suppressHydrationWarning
                     className="w-full px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
                   />
                 </div>
@@ -119,6 +170,11 @@ const RegisterPage: NextPage = () => {
                   <input
                     type="password"
                     placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+                    autoComplete="new-password"
+                    suppressHydrationWarning
                     className="w-full px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
                   />
                 </div>
@@ -126,6 +182,11 @@ const RegisterPage: NextPage = () => {
                   <input
                     type="password"
                     placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+                    autoComplete="new-password"
+                    suppressHydrationWarning
                     className="w-full px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
                   />
                 </div>
@@ -137,9 +198,10 @@ const RegisterPage: NextPage = () => {
                   logInButtonMarginTop="unset"
                   logInButtonHeight="3rem"
                   logInButtonWidth="100%"
-                  bUTTON="REGISTER"
+                  bUTTON={loading ? "REGISTERING..." : "REGISTER"}
                   bUTTONColor="#fff"
                   bUTTONTextShadow="unset"
+                  onLogInButtonContainerClick={handleRegister}
                 />
               </div>
             </div>
