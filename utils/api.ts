@@ -160,24 +160,38 @@ export const exercisesApi = {
     color?: string;
     isPublic?: boolean;
   }): Promise<Exercise | null> => {
-    return apiRequest<Exercise>('/exercises', {
+    const result = await apiRequest<Exercise | { error: string }>('/exercises', {
       method: 'POST',
       body: JSON.stringify(exercise),
     });
+    if (result && 'error' in result) {
+      return null;
+    }
+    return result as Exercise | null;
   },
 
   getMyExercises: async (): Promise<Exercise[]> => {
-    const result = await apiRequest<Exercise[]>('/exercises/my');
-    return result || [];
+    const result = await apiRequest<Exercise[] | { error: string }>('/exercises/my');
+    if (result && 'error' in result) {
+      return [];
+    }
+    return (result as Exercise[]) || [];
   },
 
   getPublicExercises: async (): Promise<Exercise[]> => {
-    const result = await apiRequest<Exercise[]>('/exercises/public');
-    return result || [];
+    const result = await apiRequest<Exercise[] | { error: string }>('/exercises/public');
+    if (result && 'error' in result) {
+      return [];
+    }
+    return (result as Exercise[]) || [];
   },
 
   getById: async (id: number): Promise<Exercise | null> => {
-    return apiRequest<Exercise>(`/exercises/${id}`);
+    const result = await apiRequest<Exercise | { error: string }>(`/exercises/${id}`);
+    if (result && 'error' in result) {
+      return null;
+    }
+    return result as Exercise | null;
   },
 
   update: async (id: number, exercise: {
@@ -188,17 +202,24 @@ export const exercisesApi = {
     color?: string;
     isPublic?: boolean;
   }): Promise<Exercise | null> => {
-    return apiRequest<Exercise>(`/exercises/${id}`, {
+    const result = await apiRequest<Exercise | { error: string }>(`/exercises/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(exercise),
     });
+    if (result && 'error' in result) {
+      return null;
+    }
+    return result as Exercise | null;
   },
 
   delete: async (id: number): Promise<boolean> => {
-    const result = await apiRequest<void>(`/exercises/${id}`, {
+    const result = await apiRequest<{ error: string } | void>(`/exercises/${id}`, {
       method: 'DELETE',
     });
-    return result !== null;
+    if (result && 'error' in result) {
+      return false;
+    }
+    return true;
   },
 };
 
