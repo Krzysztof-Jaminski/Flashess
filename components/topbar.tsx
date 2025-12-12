@@ -112,49 +112,56 @@ const TopBar: NextPage<TopBarType> = ({ className = "" }) => {
     <div
       className={`w-full h-[120px] relative z-50 ${className}`}
       style={{
-        borderLeft: "2px solid rgba(36, 245, 228, 0.25)",
+        background: 'rgba(1,7,6,0.75)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(36,245,228,0.2)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(36,245,228,0.08)',
       }}
     >
-      {/* Dolna gradientowa linia */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          height: "2px",
-          width: "50%",
-          background:
-            "linear-gradient(to right, rgba(36, 245, 228, 0.25), transparent)",
-          pointerEvents: "none",
-          zIndex: 1,
-        }}
-      />
-
       {/* Tytuł wyżej */}
       <h1 className="absolute left-1/2 top-[15%] transform -translate-x-1/2 text-[2rem] font-normal font-['Russo_One'] z-[2] text-center whitespace-nowrap mq850:text-[1.625rem] mq450:text-[1.188rem]">
-        <span className="" style={{ color: 'var(--blue-84)' }}>FLASH</span>
+        <span className="" style={{ color: 'var(--blue-84)', textShadow: '0 0 20px rgba(36,245,228,0.5)' }}>FLASH</span>
         <span className="text-white">ESS</span>
       </h1>
 
       {/* Content */}
       <div className="relative h-full max-w-screen-xl mx-auto flex justify-between items-center px-10 lg:px-20">
         {/* Left nav - visible on desktop */}
-        <div className="hidden xl:flex items-center gap-14 z-[2]">
-          <div className={getLinkClassName("/")} onClick={handleHomeClick}>
-            HOME
-          </div>
-          <div
-            className={getLinkClassName("/training-page")}
-            onClick={handleTrainingClick}
-          >
-            TRAINING
-          </div>
-          <div
-            className={getLinkClassName("/creation-page")}
-            onClick={handleCreationClick}
-          >
-            CREATION
-          </div>
+        <div className="hidden xl:flex items-center gap-6 z-[2]">
+          <Buttons
+            bUTTON="HOME"
+            onLogInButtonContainerClick={handleHomeClick}
+            className={`!py-1 !px-4 !text-sm ${pathname === "/" ? "!border-cyan-400 !shadow-[0_0_20px_rgba(36,245,228,0.3)]" : ""}`}
+            bUTTONColor={pathname === "/" ? "rgba(36,245,228,0.84)" : "#fff"}
+            bUTTONTextShadow={pathname === "/" ? "0px 0px 12px rgba(36,245,228,0.9)" : undefined}
+          />
+          <Buttons
+            bUTTON="TRAINING"
+            onLogInButtonContainerClick={handleTrainingClick}
+            className={`!py-1 !px-4 !text-sm ${
+              pathname === "/training-page" || pathname === "/puzzles" || pathname === "/puzzle-rush" || pathname === "/flashcards"
+                ? "!border-cyan-400 !shadow-[0_0_20px_rgba(36,245,228,0.3)]"
+                : ""
+            }`}
+            bUTTONColor={
+              pathname === "/training-page" || pathname === "/puzzles" || pathname === "/puzzle-rush" || pathname === "/flashcards"
+                ? "rgba(36,245,228,0.84)"
+                : "#fff"
+            }
+            bUTTONTextShadow={
+              pathname === "/training-page" || pathname === "/puzzles" || pathname === "/puzzle-rush" || pathname === "/flashcards"
+                ? "0px 0px 12px rgba(36,245,228,0.9)"
+                : undefined
+            }
+          />
+          <Buttons
+            bUTTON="CREATION"
+            onLogInButtonContainerClick={handleCreationClick}
+            className={`!py-1 !px-4 !text-sm ${pathname === "/creation-page" ? "!border-cyan-400 !shadow-[0_0_20px_rgba(36,245,228,0.3)]" : ""}`}
+            bUTTONColor={pathname === "/creation-page" ? "rgba(36,245,228,0.84)" : "#fff"}
+            bUTTONTextShadow={pathname === "/creation-page" ? "0px 0px 12px rgba(36,245,228,0.9)" : undefined}
+          />
         </div>
 
         {/* Right section - visible on desktop */}
@@ -177,13 +184,17 @@ const TopBar: NextPage<TopBarType> = ({ className = "" }) => {
                 property1="Default"
                 onLogInButtonContainerClick={handleRegisterClick}
                 bUTTON="PROFILE"
-                className="flex-shrink-0 px-4 transition-all duration-150"
+                className={`flex-shrink-0 px-4 transition-all duration-150 ${pathname === "/register-page" ? "!border-cyan-400 !shadow-[0_0_20px_rgba(36,245,228,0.3)]" : ""}`}
+                bUTTONColor={pathname === "/register-page" ? "rgba(36,245,228,0.84)" : "#fff"}
+                bUTTONTextShadow={pathname === "/register-page" ? "0px 0px 12px rgba(36,245,228,0.9)" : undefined}
               />
               <Buttons
                 property1="Default"
                 onLogInButtonContainerClick={handleLogInClick}
                 bUTTON="LOG IN"
-                className="flex-shrink-0 px-4 transition-all duration-150"
+                className={`flex-shrink-0 px-4 transition-all duration-150 ${pathname === "/login-page" ? "!border-cyan-400 !shadow-[0_0_20px_rgba(36,245,228,0.3)]" : ""}`}
+                bUTTONColor={pathname === "/login-page" ? "rgba(36,245,228,0.84)" : "#fff"}
+                bUTTONTextShadow={pathname === "/login-page" ? "0px 0px 12px rgba(36,245,228,0.9)" : undefined}
               />
             </>
           )}
@@ -199,27 +210,52 @@ const TopBar: NextPage<TopBarType> = ({ className = "" }) => {
           />
           {/* Mobile menu dropdown */}
           <div
-            className={`absolute left-1/2 -translate-x-1/2 top-full mt-2 w-32 bg-black/10 backdrop-blur-sm flex flex-col items-center py-4 gap-4 rounded-xl transition-all duration-150 ${
+            className={`absolute left-1/2 -translate-x-1/2 top-full mt-2 w-32 flex flex-col items-center py-4 gap-4 rounded-xl transition-all duration-150 ${
               isMenuOpen
                 ? "opacity-100 translate-y-0"
                 : "opacity-0 -translate-y-4 pointer-events-none"
             }`}
+            style={{
+              background: 'rgba(1,7,6,0.85)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(36,245,228,0.2)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+            }}
           >
-            <div className={getLinkClassName("/")} onClick={handleHomeClick}>
-              HOME
-            </div>
-            <div
-              className={getLinkClassName("/training-page")}
-              onClick={handleTrainingClick}
-            >
-              TRAINING
-            </div>
-            <div
-              className={getLinkClassName("/creation-page")}
-              onClick={handleCreationClick}
-            >
-              CREATION
-            </div>
+            <Buttons
+              bUTTON="HOME"
+              onLogInButtonContainerClick={handleHomeClick}
+              className={`!py-1 !px-4 !text-xs ${pathname === "/" ? "!border-cyan-400 !shadow-[0_0_20px_rgba(36,245,228,0.3)]" : ""}`}
+              bUTTONColor={pathname === "/" ? "rgba(36,245,228,0.84)" : "#fff"}
+              bUTTONTextShadow={pathname === "/" ? "0px 0px 12px rgba(36,245,228,0.9)" : undefined}
+            />
+            <Buttons
+              bUTTON="TRAINING"
+              onLogInButtonContainerClick={handleTrainingClick}
+              className={`!py-1 !px-4 !text-xs ${
+                pathname === "/training-page" || pathname === "/puzzles" || pathname === "/puzzle-rush" || pathname === "/flashcards"
+                  ? "!border-cyan-400 !shadow-[0_0_20px_rgba(36,245,228,0.3)]"
+                  : ""
+              }`}
+              bUTTONColor={
+                pathname === "/training-page" || pathname === "/puzzles" || pathname === "/puzzle-rush" || pathname === "/flashcards"
+                  ? "rgba(36,245,228,0.84)"
+                  : "#fff"
+              }
+              bUTTONTextShadow={
+                pathname === "/training-page" || pathname === "/puzzles" || pathname === "/puzzle-rush" || pathname === "/flashcards"
+                  ? "0px 0px 12px rgba(36,245,228,0.9)"
+                  : undefined
+              }
+            />
+            <Buttons
+              bUTTON="CREATION"
+              onLogInButtonContainerClick={handleCreationClick}
+              className={`!py-1 !px-4 !text-xs ${pathname === "/creation-page" ? "!border-cyan-400 !shadow-[0_0_20px_rgba(36,245,228,0.3)]" : ""}`}
+              bUTTONColor={pathname === "/creation-page" ? "rgba(36,245,228,0.84)" : "#fff"}
+              bUTTONTextShadow={pathname === "/creation-page" ? "0px 0px 12px rgba(36,245,228,0.9)" : undefined}
+            />
             {isAuthenticated ? (
               <>
                 <div className="text-white text-xs text-center px-2">
@@ -229,6 +265,14 @@ const TopBar: NextPage<TopBarType> = ({ className = "" }) => {
                 <div
                   className="text-White font-['Russo_One'] cursor-pointer hover:text-cyan-400"
                   onClick={handleLogout}
+                  tabIndex={0}
+                  role="button"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleLogout();
+                    }
+                  }}
                 >
                   LOG OUT
                 </div>
@@ -238,12 +282,28 @@ const TopBar: NextPage<TopBarType> = ({ className = "" }) => {
                 <div
                   className={getLinkClassName("/register-page")}
                   onClick={handleRegisterClick}
+                  tabIndex={0}
+                  role="button"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleRegisterClick();
+                    }
+                  }}
                 >
                   PROFILE
                 </div>
                 <div
                   className={getLinkClassName("/login-page")}
                   onClick={handleLogInClick}
+                  tabIndex={0}
+                  role="button"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleLogInClick();
+                    }
+                  }}
                 >
                   LOG IN
                 </div>

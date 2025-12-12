@@ -4,6 +4,7 @@ import { Chess } from "chess.js";
 import { Exercise } from "../utils/exercises";
 import MoveHistory from "./MoveHistory";
 import AppNumberInput from "./AppNumberInput";
+import MoveInput from "./MoveInput";
 
 interface RightPanelProps {
   userMaxMoves: string;
@@ -18,6 +19,10 @@ interface RightPanelProps {
   setVisionMode: (v: (prev: boolean) => boolean) => void;
   showMistakes: boolean;
   mistakes: number[];
+  fixedMistakes: number[];
+  reviewingMistakes: boolean;
+  exerciseResults: {[key: string]: {completed: number, attempted: number}};
+  onStartMistakeReview: () => void;
   currentExercise: Exercise | null;
   setCurrentMoveIndex: (idx: number) => void;
   setShowMistakes: (v: boolean) => void;
@@ -26,6 +31,8 @@ interface RightPanelProps {
   setShowHistory: (v: boolean) => void;
   historyIndex: number | null;
   currentMoveIndex: number;
+  fen: string;
+  onMoveInput: (move: string) => boolean;
   onGoToMove?: (moveIdx: number) => void;
 }
 
@@ -42,6 +49,10 @@ const RightPanel: React.FC<RightPanelProps> = ({
   setVisionMode,
   showMistakes,
   mistakes,
+  fixedMistakes,
+  reviewingMistakes,
+  exerciseResults,
+  onStartMistakeReview,
   currentExercise,
   setCurrentMoveIndex,
   setShowMistakes,
@@ -50,12 +61,14 @@ const RightPanel: React.FC<RightPanelProps> = ({
   setShowHistory,
   historyIndex,
   currentMoveIndex,
+  fen,
+  onMoveInput,
   onGoToMove
 }) => {
   const [startBoardMoveNumber, setStartBoardMoveNumber] = useState(1);
 
   return (
-    <div className="w-[300px] h-full border rounded-lg p-4 flex flex-col" style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'var(--blue-84)' }}>
+    <div className="glass-panel w-[300px] rounded-lg p-4 flex flex-col" style={{ minHeight: 705, marginTop: 0, alignSelf: 'flex-start' }}>
       <div className="mb-4">
         <label htmlFor="maxMovesInput" className="block text-white/80 text-sm mb-1">Moves limit (0 = until the end):</label>
         <AppNumberInput
@@ -105,39 +118,62 @@ const RightPanel: React.FC<RightPanelProps> = ({
         />
         <span className="text-white/80 text-sm">Vision mode</span>
       </div>
-      <h3 className="text-lg mb-3" style={{ color: 'var(--blue-84)' }}>Mistake Flashcards</h3>
-      {showMistakes && mistakes.length > 0 ? (
-        <div className="space-y-4">
-          {mistakes.map((idx) => (
-            <div key={idx} className="p-2 rounded" style={{ background: 'rgba(255,0,0,0.10)', border: '1.5px solid var(--red-55)' }}>
-              <div className="text-white/80 text-sm">Move {idx + 1}: <span className="font-bold">{currentExercise?.analysis[idx].move}</span></div>
-            </div>
-          ))}
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => {
-                if (!currentExercise || mistakes.length === 0) return;
-                const firstMistake = mistakes[0];
-                // Cofnij grę do pozycji sprzed pierwszego błędu
-                const chess = new Chess(currentExercise.initialFen);
-                for (let i = 0; i < firstMistake; i++) {
-                  chess.move(currentExercise.analysis[i].move);
-                }
-                setCurrentMoveIndex(firstMistake);
-                setShowMistakes(false);
-                setMistakes([]);
-                setStartBoardMoveNumber(Math.floor(firstMistake / 2) + 1);
-              }}
-              style={{ background: 'var(--blue-84)', color: '#000', borderRadius: 8, fontWeight: 'bold', padding: '8px 16px', border: '1.5px solid var(--blue-84)' }}
-            >
-              Retry
-            </button>
+      {currentExercise && (
+        <div className="mb-4 p-3 rounded" style={{ background: 'rgba(36,245,228,0.08)', border: '1px solid rgba(36,245,228,0.2)' }}>
+          <div className="text-white/80 text-sm mb-1">
+            Move {Math.floor((currentMoveIndex) / 2) + 1} of {Math.floor(currentExercise.analysis.length / 2)}
+          </div>
+          <div className="text-xs text-white/60">
+            Mistakes: {mistakes.length}
           </div>
         </div>
-      ) : showMistakes ? (
-        <div className="text-center" style={{ color: 'var(--green)' }}>No mistakes! Well done!</div>
+      )}
+      <MoveInput 
+        fen={fen} 
+        onMove={onMoveInput}
+        disabled={reviewingMistakes || !currentExercise}
+      />
+      <h3 className="text-lg mb-3" style={{ color: 'var(--blue-84)' }}>Mistake Review</h3>
+      {mistakes.length > 0 ? (
+        <div className="space-y-3">
+          {reviewingMistakes && (
+            <div className="p-2 rounded mb-3" style={{ background: 'rgba(36,245,228,0.15)', border: '1px solid rgba(36,245,228,0.3)' }}>
+              <div className="text-white/90 text-xs text-center font-bold">Reviewing Mistakes Mode</div>
+            </div>
+          )}
+          <div className="grid grid-cols-5 gap-2">
+            {mistakes.map((idx) => {
+              const isFixed = fixedMistakes.includes(idx);
+              return (
+                <div 
+                  key={idx} 
+                  className="w-10 h-10 rounded flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+                  style={{ 
+                    background: isFixed ? 'rgba(0,255,0,0.2)' : 'rgba(255,0,0,0.2)', 
+                    border: `2px solid ${isFixed ? '#00ff00' : '#ff0000'}`,
+                    color: isFixed ? '#00ff00' : '#ff0000'
+                  }}
+                  title={`Move ${idx + 1}: ${currentExercise?.analysis[idx].move}`}
+                  tabIndex={0}
+                  role="button"
+                >
+                  {idx + 1}
+                </div>
+              );
+            })}
+          </div>
+          {!reviewingMistakes && (
+            <div className="mt-4 text-center">
+              <Buttons
+                bUTTON="Review Mistakes"
+                onLogInButtonContainerClick={onStartMistakeReview}
+                className="!py-2 !px-4"
+              />
+            </div>
+          )}
+        </div>
       ) : (
-        <div className="text-white/50 text-sm">Complete the exercise to see your mistakes as flashcards.</div>
+        <div className="text-white/50 text-sm">No mistakes yet. Complete the exercise!</div>
       )}
       <div className="mt-auto pt-4">
         <MoveHistory
@@ -146,6 +182,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
           setShowHistory={setShowHistory}
           historyIndex={historyIndex}
           currentMoveIndex={currentMoveIndex}
+          reviewingMistakes={reviewingMistakes}
           onGoToMove={onGoToMove}
         />
       </div>

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Buttons from "../../components/buttons";
 import TopBar from "../../components/topbar";
 import { authApi } from "../../utils/api";
+import AnimatedBackground from "../../components/AnimatedBackground";
 
 const LoginPage: NextPage = () => {
   const router = useRouter();
@@ -50,29 +51,15 @@ const LoginPage: NextPage = () => {
   }, [username, password, router]);
 
   return (
-    <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
-      {/* Background Eclipse Elements */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Left Eclipse - Large and Bright */}
-        <div className="absolute top-[5%] -left-[30%] w-[50rem] h-[45rem] rounded-full bg-[rgba(36,245,228,0.18)] blur-[120px]" />
-
-        {/* Top Right Eclipse - Large and Dim */}
-        <div className="absolute top-[-5%] right-[-10%] w-[42rem] h-[42rem] rounded-full bg-[rgba(36,245,228,0.08)] blur-[100px]" />
-
-        {/* Bottom Right Eclipse - Small and Medium Bright */}
-        <div className="absolute top-[22%] right-[-15%] w-[35rem] h-[35rem] rounded-full bg-[rgba(36,245,228,0.15)] blur-[100px]" />
-      </div>
-
-      <main className="w-full flex flex-col !pt-[0rem] !pb-[32rem] !pl-[0rem] !pr-[0rem] box-border gap-[2.625rem] max-w-full mq1225:!pb-[24rem] mq1225:box-border mq450:gap-[1.313rem] mq450:!pb-[16rem] mq450:box-border mq1525:h-auto">
-        <main className="w-full flex flex-col gap-[5.062rem] max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-[2.5rem] mq450:gap-[1.25rem]">
-          <div className="w-full">
-            <TopBar />
-          </div>
-          
+    <div className="page-container w-full relative overflow-hidden flex flex-col items-center justify-center !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal] min-h-screen">
+      <AnimatedBackground variant="home" />
+      <TopBar />
+      <main className="content-layer w-full flex flex-col items-center justify-center !py-[4rem] !pl-[0rem] !pr-[0rem] box-border gap-[2rem] max-w-full flex-1">
+        <main className="w-full flex flex-col gap-4 max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-4 mq450:gap-4">
           {/* Login Page Specific Content */}
-          <div className="flex flex-row items-start justify-center gap-16 w-full max-w-[1400px] mx-auto px-4">
+          <div className="flex flex-row items-center justify-center gap-16 w-full max-w-[1400px] mx-auto px-4">
             {/* Left Column - Text Content */}
-            <div className="flex-1 max-w-[500px] space-y-8">
+            <div className="flex-1 max-w-[500px] space-y-8 flex flex-col items-center justify-center text-center">
               <h1 className="text-4xl">
                 Welcome to <span className="text-[rgba(36,245,228,0.84)]">FLASHESS</span>
               </h1>
@@ -86,12 +73,12 @@ const LoginPage: NextPage = () => {
                 </p>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 flex flex-col items-center">
                 <Buttons
                   property1="Default"
                   logInButtonMarginTop="unset"
-                  logInButtonHeight="3rem"
-                  logInButtonWidth="100%"
+                  logInButtonHeight="4rem"
+                  logInButtonWidth="28rem"
                   bUTTON="CONTINUE WITH GOOGLE"
                   bUTTONColor="#fff"
                   bUTTONTextShadow="unset"
@@ -99,8 +86,8 @@ const LoginPage: NextPage = () => {
                 <Buttons
                   property1="Default"
                   logInButtonMarginTop="unset"
-                  logInButtonHeight="3rem"
-                  logInButtonWidth="100%"
+                  logInButtonHeight="4rem"
+                  logInButtonWidth="28rem"
                   bUTTON="CONTINUE WITH APPLE"
                   bUTTONColor="#fff"
                   bUTTONTextShadow="unset"
@@ -108,8 +95,8 @@ const LoginPage: NextPage = () => {
                 <Buttons
                   property1="Default"
                   logInButtonMarginTop="unset"
-                  logInButtonHeight="3rem"
-                  logInButtonWidth="100%"
+                  logInButtonHeight="4rem"
+                  logInButtonWidth="28rem"
                   bUTTON="CONTINUE WITH PHONE"
                   bUTTONColor="#fff"
                   bUTTONTextShadow="unset"
@@ -118,7 +105,7 @@ const LoginPage: NextPage = () => {
             </div>
 
             {/* Right Column - Login Form */}
-            <div className="flex-1 max-w-[500px] bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg p-8">
+            <div className="flex-1 max-w-[500px] glass-panel rounded-lg p-8">
               <h2 className="text-2xl mb-6">Login</h2>
               
               <div className="space-y-4">

@@ -17,11 +17,20 @@
   --green-40: rgba(0,255,163,0.4);
   --red: #FF0000;
   --red-55: rgba(255,0,0,0.55);
+  --bg-dark: #010706;
+  --bg-dark-alt: #020908;
 }
 
 body {
   @apply leading-[normal] m-0;
+  background: var(--bg-dark);
+  min-height: 100vh;
 }
+
+html {
+  background: var(--bg-dark);
+}
+
 @layer base {
   *,
   ::before,
@@ -54,4 +63,261 @@ html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb {
 .custom-scrollbar::-webkit-scrollbar-thumb, .custom-scrollbar *::-webkit-scrollbar-thumb {
   background: rgba(36,245,228,0.25);
   border-radius: 6px;
+}
+
+/* ============================================
+   ANIMATED BACKGROUND - PRISMA-INSPIRED STYLES
+   ============================================ */
+
+/* Główne animacje dla orbów */
+@keyframes orb-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes orb-drift {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(2%, 1%) rotate(1deg);
+  }
+  50% {
+    transform: translate(0%, 2%) rotate(0deg);
+  }
+  75% {
+    transform: translate(-1%, 1%) rotate(-1deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 40px rgba(36,245,228,0.15), 
+                0 0 80px rgba(36,245,228,0.1),
+                0 0 120px rgba(36,245,228,0.05);
+  }
+  50% {
+    box-shadow: 0 0 60px rgba(36,245,228,0.2), 
+                0 0 100px rgba(36,245,228,0.15),
+                0 0 150px rgba(36,245,228,0.08);
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  33% {
+    transform: translateY(-10px) translateX(5px);
+  }
+  66% {
+    transform: translateY(5px) translateX(-5px);
+  }
+}
+
+@keyframes float-medium {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-15px) translateX(10px) scale(1.02);
+  }
+}
+
+@keyframes float-fast {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(2deg);
+  }
+}
+
+@keyframes grid-fade {
+  0%, 100% {
+    opacity: 0.02;
+  }
+  50% {
+    opacity: 0.04;
+  }
+}
+
+/* Klasa dla elementów z efektem glow */
+.glow-effect {
+  position: relative;
+}
+
+.glow-effect::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(36,245,228,0.3) 0%,
+    transparent 50%,
+    rgba(36,245,228,0.1) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.glow-effect:hover::before {
+  opacity: 1;
+}
+
+/* Glass morphism effect dla paneli - mniej ciemne, bardziej przezroczyste */
+.glass-panel {
+  background: rgba(1,7,6,0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(36,245,228,0.2);
+  box-shadow: 
+    0 8px 32px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(36,245,228,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.15);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.glass-panel:hover {
+  background: rgba(1,7,6,0.65);
+  border-color: rgba(36,245,228,0.35);
+  box-shadow: 
+    0 8px 32px rgba(0,0,0,0.4),
+    0 0 25px rgba(36,245,228,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -1px 0 rgba(0,0,0,0.15);
+}
+
+/* Glass panel without backdrop-filter for chessboard containers to fix drag offset */
+.glass-panel-no-filter {
+  background: rgba(1,7,6,0.55);
+  border: 1px solid rgba(36,245,228,0.2);
+  box-shadow: 
+    0 8px 32px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(36,245,228,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.15);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.glass-panel-no-filter:hover {
+  background: rgba(1,7,6,0.65);
+  border-color: rgba(36,245,228,0.35);
+  box-shadow: 
+    0 8px 32px rgba(0,0,0,0.4),
+    0 0 25px rgba(36,245,228,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -1px 0 rgba(0,0,0,0.15);
+}
+
+/* Efekt świecenia dla przycisków i elementów interaktywnych */
+.interactive-glow {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.interactive-glow:hover {
+  box-shadow: 
+    0 0 20px rgba(36,245,228,0.2),
+    0 0 40px rgba(36,245,228,0.1);
+  transform: translateY(-1px);
+}
+
+/* Gradient text effect */
+.gradient-text {
+  background: linear-gradient(
+    135deg,
+    rgba(36,245,228,1) 0%,
+    rgba(36,245,228,0.8) 50%,
+    rgba(0,255,163,0.9) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animacja dla linii siatki */
+.animated-grid {
+  background-image: 
+    linear-gradient(rgba(36,245,228,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(36,245,228,0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: grid-fade 8s ease-in-out infinite;
+}
+
+/* Klasa dla głównego kontenera strony */
+.page-container {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Zapewnia, że content jest nad tłem */
+.content-layer {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ukryty scrollbar dla exercise list */
+.exercise-list-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.exercise-list-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ukryty scrollbar dla move history */
+.move-history-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.move-history-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Naprawa renderowania figur podczas drag w react-chessboard */
+div[class*="react-chessboard"] {
+  position: relative;
+  transform: translateZ(0);
+}
+
+div[class*="react-chessboard"] > div {
+  position: relative;
+  transform: translateZ(0);
+}
+
+/* Poprawa pozycjonowania przeciąganych figur */
+div[class*="react-chessboard"] img[style*="position: absolute"] {
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+}
+
+/* Focus outline dla wszystkich elementów z tabindex - cyan */
+*[tabindex]:focus-visible,
+*[role="button"]:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid rgba(36,245,228,0.84) !important;
+  outline-offset: 2px !important;
 }

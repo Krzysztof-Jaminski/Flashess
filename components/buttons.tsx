@@ -143,18 +143,30 @@ const Buttons: NextPage<ButtonsType> = ({
 
   return (
     <div
-      className={`!mt-[-0.313rem] h-[2.125rem] rounded-md bg-[rgba(255,255,255,0.05)] border-solid border-[1px] box-border flex flex-row items-center justify-center !pt-[0.5rem] !pb-[0.5rem] shrink-0 cursor-pointer z-[6] text-left text-[0.938rem] text-White font-['Russo_One'] transition-all duration-150 hover:bg-[rgba(0,255,234,0.1)] hover:border-[rgba(36,245,228,0.84)] ${className}`}
+      className={`!mt-[-0.313rem] h-[2.125rem] rounded-lg border-solid border-[1.5px] box-border flex flex-row items-center justify-center !pt-[0.5rem] !pb-[0.5rem] shrink-0 cursor-pointer z-[6] text-left text-[0.938rem] text-White font-['Russo_One'] transition-all duration-200 ${className}`}
       style={{
         ...logInButtonStyle,
-        borderColor: isHovered ? "rgba(36,245,228,0.84)" : "rgba(255,255,255,0.4)",
-        outline: isHovered ? "1px solid rgba(36,245,228,0.84)" : "1px solid rgba(255,255,255,0.4)",
-        outlineOffset: "1px",
-        ...buttonBoxShadow,
+        background: isHovered 
+          ? 'linear-gradient(135deg, rgba(15,20,25,0.95) 0%, rgba(5,10,15,0.95) 100%)' 
+          : 'linear-gradient(135deg, rgba(10,15,20,0.9) 0%, rgba(5,8,12,0.9) 100%)',
+        borderColor: isHovered ? "rgba(36,245,228,0.6)" : "rgba(36,245,228,0.25)",
+        boxShadow: isHovered 
+          ? '0 0 20px rgba(36,245,228,0.3), 0 4px 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)' 
+          : '0 2px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
+        transform: isHovered ? 'translateY(-1px)' : 'translateY(0)',
       }}
       onClick={onLogInButtonContainerClick}
       data-property1={property1}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      tabIndex={0}
+      role="button"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onLogInButtonContainerClick?.();
+        }
+      }}
     >
       {children ?? renderColoredText(bUTTON || "")}
     </div>

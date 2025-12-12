@@ -11,6 +11,7 @@ import AppNumberInput from "../../components/AppNumberInput";
 import { getVisionOverlays } from "../../components/VisionMode";
 import { getExercises, getCustomExercises, type Exercise } from "../../utils/exercises";
 import { exercisesApi, authApi } from "../../utils/api";
+import MoveInput from "../../components/MoveInput";
 
 
 
@@ -26,11 +27,17 @@ interface AnalysisMove {
 function ColorDot({ color, selected }: { color: 'white' | 'black', selected?: boolean }) {
   return (
     <span
-      className={`inline-block w-4 h-4 rounded-full border transition-all duration-150
+      className={`inline-block w-5 h-5 rounded-full border-2 transition-all duration-150
         ${color === 'white' ? 'bg-white border-[#7eeeff] shadow-[0_0_6px_rgba(36,245,228,0.13)]' : 'bg-[#111] border-[#7eeeff]'}
         ${selected ? 'ring-2 ring-cyan-400 scale-105' : 'opacity-80'}
       `}
-      style={{ boxShadow: color === 'white' ? '0 0 0 1.5px rgba(36,245,228,0.13)' : undefined }}
+      style={{ 
+        boxShadow: color === 'white' ? '0 0 0 1.5px rgba(36,245,228,0.13)' : undefined,
+        minWidth: '20px',
+        minHeight: '20px',
+        width: '20px',
+        height: '20px'
+      }}
     />
   );
 }
@@ -569,7 +576,12 @@ const CreationPage: NextPage = () => {
             }
             
             return (
-              <div className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-2 text-xs text-white/80 max-h-64 overflow-y-auto custom-scrollbar">
+              <div 
+                className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-2 text-xs text-white/80 max-h-64 overflow-y-scroll move-history-scroll"
+                onWheel={(e) => {
+                  e.currentTarget.scrollTop += e.deltaY;
+                }}
+              >
                 <div className="font-bold mb-1">Move History</div>
                 <div className="flex flex-wrap gap-x-3 gap-y-1">
                   {out.map((line, idx) => (
@@ -602,22 +614,17 @@ const CreationPage: NextPage = () => {
 
 
   return (
-    <div className="w-full min-h-screen h-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[10%] -left-[20%] w-[40rem] h-[40rem] rounded-full bg-[rgba(36,245,228,0.18)] blur-[120px]" />
-        <div className="absolute top-[60%] right-[-15%] w-[30rem] h-[30rem] rounded-full bg-[rgba(36,245,228,0.08)] blur-[100px]" />
-        <div className="absolute top-[30%] left-[60%] w-[25rem] h-[25rem] rounded-full bg-[rgba(36,245,228,0.15)] blur-[100px]" />
-      </div>
-      <main className="w-full flex flex-col !pt-[0rem] !pb-[6rem] !pl-[0rem] !pr-[0rem] box-border gap-[0.5rem] max-w-full mq1225:!pb-[5rem] mq1225:box-border mq450:gap-[0.3rem] mq450:!pb-[4rem] mq450:box-border mq1525:h-auto">
+    <div className="page-container w-full relative overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal] min-h-screen">
+      <main className="content-layer w-full flex flex-col !pt-[0rem] !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border gap-[0.5rem] max-w-full">
         <main className="w-full flex flex-col gap-[0.7rem] max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-[0.5rem] mq450:gap-[0.2rem]">
           <div className="w-full">
             <TopBar />
           </div>
-          <div className="w-full px-1 mt-[-0.5rem]">
-            <div className="flex flex-row gap-4 max-w-[1400px] mx-auto items-start">
+          <div className="w-full px-1" style={{ marginTop: '0.5rem' }}>
+            <div className="flex flex-row items-center gap-4 max-w-[1400px] mx-auto">
               {/* Left: Add custom exercise */}
-              <div className="w-[300px] bg-white/5 border border-white/30 rounded-lg p-4 mb-6 mt-8">
-                <h3 className="text-lg text-cyan-300 mb-3">Add your own exercise</h3>
+              <div className="w-[300px] glass-panel rounded-lg p-4" style={{ marginTop: '0', minHeight: 705, alignSelf: 'flex-start' }}>
+                <h3 className="text-lg text-cyan-300 mb-3 text-center">Add your own exercise</h3>
                 {/* Vision Mode Toggle Button */}
                 <div className="mb-3">
                   <Buttons
@@ -627,50 +634,155 @@ const CreationPage: NextPage = () => {
                   />
                 </div>
                 {/* Exercise Name Input */}
-                <div className="mb-3">
+                <div className="mb-4">
+                  <label htmlFor="exerciseName" className="block text-white/80 text-sm mb-2">
+                    Exercise Name
+                  </label>
                   <input
+                    id="exerciseName"
                     value={exerciseName}
                     onChange={e => setExerciseName(e.target.value)}
-                    placeholder="Exercise name"
-                    className="w-full h-8 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm"
+                    placeholder="Enter exercise name"
+                    className="h-[2.125rem] rounded-lg bg-[rgba(255,255,255,0.05)] border-solid border-[1.5px] box-border w-full pr-4 pl-4 text-[0.938rem] text-white font-['Russo_One'] transition-all duration-150 focus:border-[rgba(36,245,228,0.84)] focus:shadow-[0_0_0_2px_rgba(36,245,228,0.18)] focus:outline-none"
+                    style={{ 
+                      borderColor: 'rgba(255,255,255,0.4)', 
+                      outline: 'none',
+                      outlineOffset: 0, 
+                      background: '#181c1f', 
+                      color: '#fff' 
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.outline = '2px solid rgba(36,245,228,0.84)';
+                      e.target.style.outlineOffset = '2px';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.outline = 'none';
+                      e.target.style.outlineOffset = '0';
+                    }}
+                    tabIndex={0}
                   />
                 </div>
 
-                {/* PGN Input - smaller size */}
-                <div className="h-16 mb-3">
+                {/* PGN Input */}
+                <div className="mb-4">
+                  <label htmlFor="customPGN" className="block text-white/80 text-sm mb-2">
+                    PGN (optional)
+                  </label>
                   <textarea
+                    id="customPGN"
                     value={customPGN}
                     onChange={e => setCustomPGN(e.target.value)}
-                    placeholder="Paste your PGN here (optional)"
-                    className="w-full h-12 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs mb-2"
+                    placeholder="Paste your PGN here"
+                    rows={3}
+                    className="rounded-lg bg-[rgba(255,255,255,0.05)] border-solid border-[1.5px] box-border w-full pr-4 pl-4 pt-2 pb-2 text-[0.938rem] text-white font-['Russo_One'] transition-all duration-150 focus:border-[rgba(36,245,228,0.84)] focus:shadow-[0_0_0_2px_rgba(36,245,228,0.18)] focus:outline-none resize-none"
+                    style={{ 
+                      borderColor: 'rgba(255,255,255,0.4)', 
+                      outline: 'none',
+                      outlineOffset: 0, 
+                      background: '#181c1f', 
+                      color: '#fff' 
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.outline = '2px solid rgba(36,245,228,0.84)';
+                      e.target.style.outlineOffset = '2px';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.outline = 'none';
+                      e.target.style.outlineOffset = '0';
+                    }}
+                    tabIndex={0}
                   />
                 </div>
 
-                <div className="flex items-center gap-6 mb-3">
-                  <label className="text-white/80 text-sm">Training color:</label>
-                  <label className="flex items-center gap-4 cursor-pointer select-none">
+                <div className="flex items-center gap-6 mb-4">
+                  <label className="text-white/80 text-sm">Color:</label>
+                  <label 
+                    className="flex items-center gap-2 cursor-pointer select-none p-2 rounded transition-all duration-150" 
+                    tabIndex={0} 
+                    role="button" 
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCustomColor('white'); } }}
+                    style={{ 
+                      minWidth: '100px',
+                      maxWidth: '120px',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.outline = '2px solid rgba(36,245,228,0.84)';
+                      e.currentTarget.style.outlineOffset = '-2px';
+                      e.currentTarget.style.borderRadius = '4px';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.outline = 'none';
+                    }}
+                  >
                     <input type="radio" checked={customColor==='white'} onChange={()=>setCustomColor('white')} className="hidden" />
                     <ColorDot color="white" selected={customColor==='white'} />
-                    <span className="text-white/80 text-xs ml-1">White</span>
+                    <span className="text-white/80 text-xs">White</span>
                   </label>
-                  <label className="flex items-center gap-4 cursor-pointer select-none">
+                  <label 
+                    className="flex items-center gap-2 cursor-pointer select-none p-2 rounded transition-all duration-150" 
+                    tabIndex={0} 
+                    role="button" 
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCustomColor('black'); } }}
+                    style={{ 
+                      minWidth: '100px',
+                      maxWidth: '120px',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.outline = '2px solid rgba(36,245,228,0.84)';
+                      e.currentTarget.style.outlineOffset = '-2px';
+                      e.currentTarget.style.borderRadius = '4px';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.outline = 'none';
+                    }}
+                  >
                     <input type="radio" checked={customColor==='black'} onChange={()=>setCustomColor('black')} className="hidden" />
                     <ColorDot color="black" selected={customColor==='black'} />
-                    <span className="text-white/80 text-xs ml-1">Black</span>
+                    <span className="text-white/80 text-xs">Black</span>
                   </label>
                 </div>
                 
-                <div className="flex items-center gap-3 mb-5">
+                <div className="mb-4">
+                  <label 
+                    htmlFor="isPublic" 
+                    className="flex items-center gap-3 cursor-pointer select-none p-2 rounded-lg transition-all duration-150 hover:bg-[rgba(36,245,228,0.1)]"
+                    style={{ 
+                      background: isPublic ? 'rgba(36,245,228,0.15)' : 'transparent',
+                      border: isPublic ? '1px solid rgba(36,245,228,0.3)' : '1px solid transparent'
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setIsPublic(!isPublic);
+                      }
+                    }}
+                  >
+                    <div 
+                      className="w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-150"
+                      style={{
+                        borderColor: isPublic ? 'var(--blue-84)' : 'rgba(255,255,255,0.4)',
+                        background: isPublic ? 'var(--blue-84)' : 'transparent'
+                      }}
+                    >
+                      {isPublic && (
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M10 3L4.5 8.5L2 6" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                    <span className="text-white/80 text-sm font-['Russo_One']">Make this exercise public</span>
+                  </label>
                   <input
                     type="checkbox"
                     id="isPublic"
                     checked={isPublic}
                     onChange={(e) => setIsPublic(e.target.checked)}
-                    className="w-4 h-4 rounded border-white/30 bg-white/10 text-cyan-400 focus:ring-cyan-400"
+                    className="hidden"
                   />
-                  <label htmlFor="isPublic" className="text-white/80 text-sm cursor-pointer">
-                    Make this exercise public
-                  </label>
                 </div>
 
                 {/* Two buttons for adding exercises */}
@@ -692,39 +804,179 @@ const CreationPage: NextPage = () => {
                 {/* Move History - moved to left panel */}
                 {renderMoveHistory()}
               </div>
-              {/* Center: Chessboard (identycznie jak w TrainingBoard) */}
-              <div className="flex-1 border rounded-lg p-4 flex flex-col items-center justify-center mt-6" style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.3)' }}>
-                <div
-                  className="aspect-square mt-0"
-                  style={{ width: 700, height: 700, minWidth: 700, minHeight: 700, maxWidth: 700, maxHeight: 700 }}
-                >
-                  <div className={`w-full h-full flex items-center justify-center mx-auto${boardHighlight === 'red' ? ' ring-4' : ''}`}
-                    style={boardHighlight === 'red' ? { boxShadow: '0 0 0 4px var(--red-55)' } : {}}>
-                    <Chessboard
-                      position={game.fen()}
-                      boardWidth={700}
-                      onPieceDrop={handlePieceDrop}
-                      boardOrientation={customColor}
-                      customSquareStyles={visionSquares}
-                      customBoardStyle={{
-                        borderRadius: "4px",
-                        boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
-                        width: 700,
-                        height: 700
-                      }}
-                      customArrowColor="var(--blue-84)"
-                    />
-                  </div>
+              {/* Center: Chessboard */}
+              <div className="glass-panel-no-filter rounded-lg p-4" style={{ width: 716, minHeight: 705, marginTop: '0', alignSelf: 'flex-start' }}>
+                <div style={{ width: 700, height: 700, position: 'relative' }}>
+                  <Chessboard
+                    position={game.fen()}
+                    boardWidth={700}
+                    onPieceDrop={handlePieceDrop}
+                    boardOrientation={customColor}
+                    customSquareStyles={visionSquares}
+                    arePiecesDraggable={true}
+                    areArrowsAllowed={false}
+                    arePremovesAllowed={false}
+                    customBoardStyle={{
+                      borderRadius: "4px",
+                      boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
+                    }}
+                    customArrowColor="var(--blue-84)"
+                    customDropSquareStyle={{
+                      boxShadow: "inset 0 0 1px 4px rgba(36,245,228,0.5)"
+                    }}
+                  />
                 </div>
               </div>
               {/* Right: Popular Moves with Opening Tree Integration */}
-              <div className="w-[370px] bg-white/5 border border-white/30 rounded-lg p-4 mt-8">
-                <h3 className="text-lg text-cyan-300 mb-3">Exercise Lines Analyzed</h3>
+              <div className="w-[300px] glass-panel rounded-lg p-4" style={{ marginTop: '0', minHeight: 705, alignSelf: 'flex-start' }}>
+                <div className="mb-3">
+                  <div className="flex justify-center mb-2">
+                    <Buttons
+                      bUTTON={showCustomExercises ? "Show Moves" : `Custom Exercises (${customExercises.length})`}
+                      onLogInButtonContainerClick={() => setShowCustomExercises(!showCustomExercises)}
+                      className="!py-1 !px-3 !text-xs !rounded"
+                    />
+                  </div>
+                  <h3 className="text-lg text-cyan-300 text-center">
+                    {showCustomExercises ? "Your Custom Exercises" : "Lines Analyzed"}
+                  </h3>
+                </div>
                 
+                {!showCustomExercises && (
+                  <MoveInput 
+                    fen={game.fen()} 
+                    onMove={(moveText) => {
+                      try {
+                        const newGame = new Chess(game.fen());
+                        const move = newGame.move(moveText);
+                        if (move) {
+                          const algebraicMove = move.san;
+                          
+                          // Sprawdź czy jesteśmy na ostatnim ruchu historii
+                          const isAtLatestMove = historyIndex === null || historyIndex === moveHistory.length;
+                          
+                          if (isAtLatestMove) {
+                            // Dodaj do historii tylko jeśli jesteśmy na ostatnim ruchu
+                            setMoveHistory(prev => {
+                              const newLength = prev.length + 1;
+                              setHistoryIndex(newLength);
+                              return [...prev, algebraicMove];
+                            });
+                          } else {
+                            // Jeśli nie jesteśmy na końcu, zaktualizuj historyIndex
+                            setHistoryIndex(prev => prev !== null ? prev + 1 : 1);
+                          }
+                          
+                          setGame(newGame);
+                          return true;
+                        }
+                        return false;
+                      } catch {
+                        return false;
+                      }
+                    }}
+                  />
+                )}
                 
-                <div className="space-y-2">
-                  {/* Popular Moves from Study Database + User Exercises */}
-                  {isClient ? (() => {
+                {showCustomExercises ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <button
+                        onClick={() => loadCustomExercises()}
+                        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg hover:bg-white/15 transition-all duration-200 text-white text-sm"
+                        title="Refresh exercises"
+                        tabIndex={0}
+                        role="button"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            loadCustomExercises();
+                          }
+                        }}
+                      >
+                        ↻
+                      </button>
+                    </div>
+                    <div 
+                      className="space-y-2 overflow-y-scroll exercise-list-scroll"
+                      style={{ maxHeight: '792px' }}
+                    >
+                      {customExercises.length === 0 ? (
+                        <div className="text-xs text-white/60 p-2">No exercises yet. Create one above!</div>
+                      ) : (
+                        customExercises.map((exercise) => {
+                          const isBlack = exercise.color === 'black';
+                          return (
+                            <div
+                              key={exercise.id}
+                              className="p-2 pr-6 rounded cursor-pointer transition-colors flex items-center justify-between font-['Russo_One']"
+                              style={{ background: 'rgba(255,255,255,0.1)' }}
+                              onClick={() => loadExerciseToBoard(exercise)}
+                              onWheel={(e) => {
+                                const scrollContainer = e.currentTarget.closest('.exercise-list-scroll') as HTMLElement;
+                                if (scrollContainer) {
+                                  scrollContainer.scrollTop += e.deltaY;
+                                }
+                              }}
+                              tabIndex={0}
+                              role="button"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  loadExerciseToBoard(exercise);
+                                }
+                              }}
+                            >
+                              <div className="flex-1">
+                                <div className="text-white/90 text-sm font-bold mb-1">{exercise.name}</div>
+                                <div className="flex items-center gap-2 text-xs">
+                                  {isBlack ? (
+                                    <span className="text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-800 border border-gray-400 flex items-center gap-1">
+                                      <span className="w-2 h-2 bg-white rounded-sm"></span>
+                                      BLACK
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-800 border border-gray-400 flex items-center gap-1">
+                                      <span className="w-2 h-2 bg-black rounded-sm"></span>
+                                      WHITE
+                                    </span>
+                                  )}
+                                  <span className="text-white/60">
+                                    {new Date(exercise.createdAt || Date.now()).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteCustomExercise(exercise.id);
+                                }}
+                                className="ml-2 px-2 py-1 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-xs hover:bg-red-500/30 transition-colors"
+                                tabIndex={0}
+                                role="button"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    deleteCustomExercise(exercise.id);
+                                  }
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div 
+                    className="space-y-2 overflow-y-scroll exercise-list-scroll"
+                    style={{ maxHeight: '792px' }}
+                  >
+                    {/* Popular Moves from Study Database + User Exercises */}
+                    {isClient ? (() => {
                     // Użyj studyGames z state (załadowane po hydratacji)
                     // Dodaj ćwiczenia użytkownika i publiczne ćwiczenia z backendu
                     const allGames = [
@@ -843,20 +1095,28 @@ const CreationPage: NextPage = () => {
                     }
                     
                     return popularMoves.map((move, index) => (
-                    <div
-                      key={index}
+                      <div
+                        key={index}
                         className={`p-3 rounded cursor-pointer transition-colors ${
-                        selectedMove === move.move
-                          ? "bg-cyan-400/30 border border-cyan-400/50"
-                          : "bg-white/10 hover:bg-white/15"
-                      }`}
-                      onClick={() => handleMoveSelect(move.move)}
-                    >
-                      <div className="text-sm font-bold">{move.move}</div>
-                      <div className="text-xs text-white/70">
+                          selectedMove === move.move
+                            ? "bg-cyan-400/30 border border-cyan-400/50"
+                            : "bg-white/10 hover:bg-white/15"
+                        }`}
+                        onClick={() => handleMoveSelect(move.move)}
+                        tabIndex={0}
+                        role="button"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleMoveSelect(move.move);
+                          }
+                        }}
+                      >
+                        <div className="text-sm font-bold">{move.move}</div>
+                        <div className="text-xs text-white/70">
                           {move.name}
-                      </div>
-                      <div className="text-xs text-white/60">
+                        </div>
+                        <div className="text-xs text-white/60">
                           {move.games && move.games.length > 0 && (
                             <div className="text-cyan-300">
                               {move.games.slice(0, 2).join(', ')}
@@ -867,83 +1127,8 @@ const CreationPage: NextPage = () => {
                       </div>
                     ));
                   })() : <div className="text-xs text-white/60">Loading exercises...</div>}
-                  
-                  {/* Custom Exercises Section - pokazuje wszystkie: lokalne (urządzenie) + z serwera (użytkownik) */}
-                  {isClient && (
-                    <div className="mt-6">
-                      <div className="flex items-center gap-2 mb-2">
-                        <button
-                          onClick={() => setShowCustomExercises(!showCustomExercises)}
-                          className={`flex-1 p-3 bg-white/10 border rounded-lg hover:bg-white/15 transition-all duration-200 flex items-center justify-between ${
-                            highlightButton 
-                              ? 'border-green-400 shadow-lg shadow-green-400/20' 
-                              : 'border-white/20'
-                          }`}
-                        >
-                          <span className="text-sm font-bold text-white">
-                            Your Custom Exercises ({customExercises.length})
-                          </span>
-                          <span className="text-white">
-                            {showCustomExercises ? '▼' : '▶'}
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => loadCustomExercises()}
-                          className="px-3 py-3 bg-white/10 border border-white/20 rounded-lg hover:bg-white/15 transition-all duration-200 text-white text-sm"
-                          title="Refresh exercises"
-                        >
-                          ↻
-                        </button>
-                      </div>
-                      
-                      {showCustomExercises && (
-                        <div className="mt-3 space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                          {customExercises.length === 0 ? (
-                            <div className="text-xs text-white/60 p-2">No exercises yet. Create one above!</div>
-                          ) : (
-                            customExercises.map((exercise) => {
-                              // Określ typ ćwiczenia
-                              const isLocal = typeof exercise.id === 'string' && exercise.id.startsWith('custom-');
-                              const isBackend = typeof exercise.id === 'number';
-                              const isPublic = isBackend && exercise.isPublic === true;
-                              const isPrivate = isBackend && exercise.isPublic === false;
-                              
-                              let statusBadge = null;
-                              if (isLocal) {
-                                statusBadge = <span className="ml-2 text-yellow-400 text-xs">(Lokalne)</span>;
-                              } else if (isPublic) {
-                                statusBadge = <span className="ml-2 text-cyan-400 text-xs">(Publiczne)</span>;
-                              } else if (isPrivate) {
-                                statusBadge = <span className="ml-2 text-gray-400 text-xs">(Prywatne)</span>;
-                              }
-                              
-                              return (
-                                <div key={exercise.id} className="flex items-center justify-between p-2 bg-white/5 rounded border border-white/10">
-                                  <div 
-                                    className="flex-1 cursor-pointer hover:bg-white/10 transition-colors p-1 rounded"
-                                    onClick={() => loadExerciseToBoard(exercise)}
-                                  >
-                                    <div className="text-sm font-bold text-white">{exercise.name}</div>
-                                    <div className="text-xs text-white/60">
-                                      {exercise.color || 'white'} to play
-                                      {statusBadge}
-                                    </div>
-                                  </div>
-                                  <button
-                                    onClick={() => deleteCustomExercise(exercise.id)}
-                                    className="ml-2 px-2 py-1 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-xs hover:bg-red-500/30 transition-colors"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

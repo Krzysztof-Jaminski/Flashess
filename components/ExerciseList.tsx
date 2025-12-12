@@ -6,9 +6,10 @@ interface ExerciseListProps {
   exercises: Exercise[];
   currentExercise: Exercise | null;
   onSelect: (exercise: Exercise) => void;
+  exerciseResults?: {[key: string]: {completed: number, attempted: number}};
 }
 
-const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise, onSelect }) => {
+const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise, onSelect, exerciseResults = {} }) => {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("name-asc");
   const [colorFilter, setColorFilter] = useState<"all" | "white" | "black">("all");
@@ -97,7 +98,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
   };
 
   return (
-    <div className="w-[300px] h-full border rounded-lg p-3 pt-2 flex flex-col font-['Russo_One']" style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.3)', marginTop: '0.5rem', marginBottom: '0.5rem', justifyContent: 'flex-start' }}>
+    <div className="glass-panel w-[300px] rounded-lg p-3 pt-2 flex flex-col font-['Russo_One']" style={{ minHeight: 705, maxHeight: 715, marginTop: 0, alignSelf: 'flex-start', justifyContent: 'flex-start' }}>
       <div className="flex items-center justify-between mb-2">
         <div>
           <h3 className="text-lg" style={{ color: '#fff' }}>Exercises</h3>
@@ -136,6 +137,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
           onChange={e => setColorFilter(e.target.value as "all" | "white" | "black")}
           className="h-[2.125rem] rounded-xl bg-[rgba(255,255,255,0.05)] border-solid border-[1.5px] box-border w-full pr-8 pl-4 text-[0.938rem] text-white font-['Russo_One'] transition-all duration-150 focus:border-[rgba(36,245,228,0.84)] focus:shadow-[0_0_0_2px_rgba(36,245,228,0.18)] focus:outline-none appearance-none"
           style={{ borderColor: 'rgba(255,255,255,0.4)', outline: '1px solid rgba(255,255,255,0.4)', outlineOffset: 1, background: '#181c1f', color: '#fff' }}
+          tabIndex={0}
         >
           <option value="all">All colors</option>
           <option value="white">White only</option>
@@ -146,6 +148,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
           onChange={e => setSort(e.target.value)}
           className="h-[2.125rem] rounded-xl bg-[rgba(255,255,255,0.05)] border-solid border-[1.5px] box-border w-full pr-8 pl-4 text-[0.938rem] text-white font-['Russo_One'] transition-all duration-150 focus:border-[rgba(36,245,228,0.84)] focus:shadow-[0_0_0_2px_rgba(36,245,228,0.18)] focus:outline-none appearance-none"
           style={{ borderColor: 'rgba(255,255,255,0.4)', outline: '1px solid rgba(255,255,255,0.4)', outlineOffset: 1, background: '#181c1f', color: '#fff' }}
+          tabIndex={0}
         >
           <option value="name-asc" style={{ background: '#181c1f', color: '#fff', padding: '0.5rem 1.5rem' }}>Name A-Z</option>
           <option value="name-desc" style={{ background: '#181c1f', color: '#fff', padding: '0.5rem 1.5rem' }}>Name Z-A</option>
@@ -155,8 +158,11 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
           <option value="won-asc" style={{ background: '#181c1f', color: '#fff', padding: '0.5rem 1.5rem' }}>Least won</option>
         </select>
       </div>
-      <div className="space-y-2 max-h-[440px] overflow-y-auto custom-scrollbar">
-        <div className="custom-scrollbar">
+      <div 
+        className="space-y-2 overflow-y-scroll exercise-list-scroll"
+        style={{ maxHeight: '792px' }}
+      >
+        <div>
           {filteredSortedExercises.map((exercise) => {
             const stats = exerciseStats[exercise.id] || { total: 0, perfect: 0 };
             const isBlack = exercise.color === 'black';
@@ -166,11 +172,26 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
             return (
               <div
                 key={exercise.id}
-                className={`p-2 rounded cursor-pointer transition-colors flex items-center justify-between font-['Russo_One']`}
+                className={`p-2 pr-6 rounded cursor-pointer transition-colors flex items-center justify-between font-['Russo_One']`}
                 style={currentExercise?.id === exercise.id
                   ? { background: 'rgba(36,245,228,0.30)', border: '1.5px solid var(--blue-84)' }
                   : { background: 'rgba(255,255,255,0.1)' }}
                 onClick={() => onSelect(exercise)}
+                onWheel={(e) => {
+                  const scrollContainer = e.currentTarget.closest('.exercise-list-scroll') as HTMLElement;
+                  if (scrollContainer) {
+                    e.preventDefault();
+                    scrollContainer.scrollTop += e.deltaY;
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelect(exercise);
+                  }
+                }}
               >
                 <div>
                   <div className="text-sm font-bold flex items-center gap-2">
@@ -204,26 +225,53 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
                   </div>
                 </div>
                 <div className="flex items-center justify-center">
-                  <div
-                    style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: '50%',
-                      background: 'rgba(255,255,255,0.12)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontFamily: 'Russo One, sans-serif',
-                      fontWeight: 600,
-                      fontSize: '0.6rem',
-                      border: '2.2px solid var(--blue-84)',
-                      boxShadow: '0 2px 8px rgba(36,245,228,0.13)',
-                      gap: 1,
-                    }}
-                  >
-                    <span style={{ color: '#fff', fontWeight: 600 }}>{stats.perfect}</span>
-                    <span style={{ color: '#fff', marginLeft: 2, fontWeight: 600 }}>/ {stats.total}</span>
-                  </div>
+                  {exerciseResults[exercise.id] ? (
+                    <div
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.12)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'Russo One, sans-serif',
+                        fontWeight: 600,
+                        fontSize: '0.6rem',
+                        border: `2.2px solid ${exerciseResults[exercise.id].completed > 0 ? '#00ff00' : '#ffaa00'}`,
+                        boxShadow: `0 2px 8px ${exerciseResults[exercise.id].completed > 0 ? 'rgba(0,255,0,0.3)' : 'rgba(255,170,0,0.3)'}`,
+                        gap: 1,
+                      }}
+                    >
+                      <span style={{ color: exerciseResults[exercise.id].completed > 0 ? '#00ff00' : '#ffaa00', fontWeight: 600 }}>
+                        {exerciseResults[exercise.id].completed}
+                      </span>
+                      <span style={{ color: '#fff', marginLeft: 2, fontWeight: 600 }}>
+                        / {exerciseResults[exercise.id].attempted}
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.12)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'Russo One, sans-serif',
+                        fontWeight: 600,
+                        fontSize: '0.6rem',
+                        border: '2.2px solid var(--blue-84)',
+                        boxShadow: '0 2px 8px rgba(36,245,228,0.13)',
+                        gap: 1,
+                      }}
+                    >
+                      <span style={{ color: '#fff', fontWeight: 600 }}>{stats.perfect}</span>
+                      <span style={{ color: '#fff', marginLeft: 2, fontWeight: 600 }}>/ {stats.total}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             );

@@ -550,19 +550,13 @@ const TrainingPage: NextPage = () => {
   }, [currentExercise]);
 
   return (
-    <div className="w-full min-h-screen h-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[5%] -left-[30%] w-[50rem] h-[45rem] rounded-full bg-[rgba(36,245,228,0.18)] blur-[120px]" />
-        <div className="absolute top-[-5%] right-[-10%] w-[42rem] h-[42rem] rounded-full bg-[rgba(36,245,228,0.08)] blur-[100px]" />
-        <div className="absolute top-[22%] right-[-15%] w-[35rem] h-[35rem] rounded-full bg-[rgba(36,245,228,0.15)] blur-[100px]" />
-      </div>
-
-      <main className="w-full flex flex-col !pt-[0rem] !pb-[2rem] !pl-[0rem] !pr-[0rem] box-border gap-[0.5rem] max-w-full mq1225:!pb-[2rem] mq1225:box-border mq450:gap-[0.3rem] mq450:!pb-[1rem] mq450:box-border mq1525:h-auto">
+    <div className="page-container w-full relative overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal] min-h-screen">
+      <main className="content-layer w-full flex flex-col !pt-[0rem] !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border gap-[0.5rem] max-w-full mq1225:!pb-[0rem] mq1225:box-border mq450:gap-[0.3rem] mq450:!pb-[0rem] mq450:box-border mq1525:h-auto">
         <main className="w-full flex flex-col gap-[0.7rem] max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-[0.5rem] mq450:gap-[0.2rem]">
           <div className="w-full">
             <TopBar />
           </div>
-          <div className="w-full px-1 mt-[-0.5rem]">
+          <div className="w-full px-1" style={{ marginTop: '0.5rem' }}>
             <div className="flex flex-row gap-4 max-w-[1400px] mx-auto items-start">
               {/* Lewa kolumna - Lista ćwiczeń */}
               <ExerciseList

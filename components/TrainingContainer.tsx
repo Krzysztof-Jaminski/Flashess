@@ -19,7 +19,11 @@ const TrainingContainer: React.FC = () => {
   const [score, setScore] = useState(0);
   const [totalMoves, setTotalMoves] = useState(0);
   const [mistakes, setMistakes] = useState<number[]>([]);
+  const [fixedMistakes, setFixedMistakes] = useState<number[]>([]);
   const [showMistakes, setShowMistakes] = useState(false);
+  const [currentMistakeIndex, setCurrentMistakeIndex] = useState(0);
+  const [reviewingMistakes, setReviewingMistakes] = useState(false);
+  const [exerciseResults, setExerciseResults] = useState<{[key: string]: {completed: number, attempted: number}}>({});
   const [boardHighlight, setBoardHighlight] = useState<string | null>(null);
   const [hintMode, setHintMode] = useState(false);
   const [pendingComputerMove, setPendingComputerMove] = useState<string | null>(null);
@@ -75,6 +79,109 @@ const TrainingContainer: React.FC = () => {
     setHistoryIndex(idx);
   }, [currentExercise]);
 
+  const onGoToMove = useCallback((moveIdx: number) => {
+    goToHistoryIndex(moveIdx);
+  }, [goToHistoryIndex]);
+
+  // Obsługa ruchu z tekstu (MoveInput)
+  const onMoveInput = useCallback((moveText: string): boolean => {
+    if (!currentExercise || reviewingMistakes) return false;
+    
+    const chess = new Chess(fen);
+    try {
+      const move = chess.move(moveText);
+      if (!move) return false;
+      
+      // Sprawdź czy ruch jest poprawny
+      const expectedMove = currentExercise.analysis[currentMoveIndex]?.move;
+      if (move.san === expectedMove) {
+        setFen(chess.fen());
+        setCurrentMoveIndex((prev) => prev + 1);
+        setIsCorrect(true);
+        setBoardHighlight("green");
+        setTimeout(() => setBoardHighlight(null), 500);
+        setPendingComputerMove("pending");
+        
+        setTimeout(() => {
+          const nextIdx = currentMoveIndex + 1;
+          // Sprawdź czy był to błąd, który teraz naprawiliśmy (tylko w trybie review)
+          if (reviewingMistakes && mistakes.includes(currentMoveIndex) && !fixedMistakes.includes(currentMoveIndex)) {
+            setFixedMistakes((prev) => [...prev, currentMoveIndex]);
+            // Przejdź do następnego błędu
+            const nextMistakeIdx = currentMistakeIndex + 1;
+            if (nextMistakeIdx < mistakes.length) {
+              setCurrentMistakeIndex(nextMistakeIdx);
+              const nextMistake = mistakes[nextMistakeIdx];
+              const chessTemp = new Chess(currentExercise.initialFen);
+              for (let i = 0; i < nextMistake; i++) {
+                chessTemp.move(currentExercise.analysis[i].move);
+              }
+              setFen(chessTemp.fen());
+              setCurrentMoveIndex(nextMistake);
+              setPendingComputerMove(null);
+              return;
+            } else {
+              // Wszystkie błędy naprawione
+              setReviewingMistakes(false);
+              setCurrentMistakeIndex(0);
+              setFixedMistakes([]);
+              setMistakes([]);
+              setExerciseResults(prev => ({
+                ...prev,
+                [currentExercise.id]: {
+                  completed: 1,
+                  attempted: 1
+                }
+              }));
+              setPendingComputerMove(null);
+              return;
+            }
+          }
+          
+          if (nextIdx < currentExercise.analysis.length) {
+            const nextMove = currentExercise.analysis[nextIdx].move;
+            if (["0-1", "1-0", "*", "½-½"].includes(nextMove)) {
+              setExerciseResults(prev => ({
+                ...prev,
+                [currentExercise.id]: {
+                  completed: 0,
+                  attempted: 1
+                }
+              }));
+              setPendingComputerMove(null);
+              return false;
+            }
+            chess.move(nextMove);
+            setFen(chess.fen());
+            setCurrentMoveIndex(nextIdx + 1);
+          } else {
+            setExerciseResults(prev => ({
+              ...prev,
+              [currentExercise.id]: {
+                completed: 0,
+                attempted: 1
+              }
+            }));
+          }
+          setPendingComputerMove(null);
+        }, 500);
+        
+        return true;
+      } else {
+        setIsCorrect(false);
+        setBoardHighlight("red");
+        if (!mistakes.includes(currentMoveIndex)) {
+          setMistakes((prev) => [...prev, currentMoveIndex]);
+        }
+        setFixedMistakes((prev) => prev.filter(m => m !== currentMoveIndex));
+        setTimeout(() => setBoardHighlight(null), 800);
+        return false;
+      }
+    } catch (err) {
+      return false;
+    }
+  }, [fen, currentExercise, currentMoveIndex, reviewingMistakes, mistakes, fixedMistakes, currentMistakeIndex]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const now = Date.now();
@@ -112,7 +219,20 @@ const TrainingContainer: React.FC = () => {
     // Jeśli ustawiono userMaxMoves, nie pozwól na dalsze ruchy po osiągnięciu limitu
     const maxMovesNum = parseInt(userMaxMoves) * 2;
     if (!isNaN(maxMovesNum) && maxMovesNum > 0 && currentMoveIndex >= maxMovesNum) {
-      setShowMistakes(true);
+      // Zapisz wynik - dotarliśmy do końca
+      if (currentExercise) {
+        // Sprawdź czy automatyczne ruchy pokrywały cały limit
+        const autoLimitNum = autoStartingMoves ? parseInt(autoMovesLimit) * 2 : 0;
+        const noErrorsPossible = autoLimitNum >= maxMovesNum;
+        
+        setExerciseResults(prev => ({
+          ...prev,
+          [currentExercise.id]: {
+            completed: 0, // Nie poprawiliśmy jeszcze błędów (lub nie było co poprawiać)
+            attempted: 1
+          }
+        }));
+      }
       return false;
     }
     // Sprawdź, czy ruch jest legalny zanim wywołasz move
@@ -136,7 +256,14 @@ const TrainingContainer: React.FC = () => {
         if (nextIdx < currentExercise.analysis.length) {
           const nextMove = currentExercise.analysis[nextIdx].move;
           if (["0-1", "1-0", "*", "½-½"].includes(nextMove)) {
-            setShowMistakes(true);
+            // Dotarliśmy do końca - zapisz wynik
+            setExerciseResults(prev => ({
+              ...prev,
+              [currentExercise.id]: {
+                completed: 0, // Nie poprawiliśmy jeszcze błędów
+                attempted: 1
+              }
+            }));
             setPendingComputerMove(null);
             return false;
           }
@@ -144,7 +271,15 @@ const TrainingContainer: React.FC = () => {
           setFen(chess.fen());
           setCurrentMoveIndex(nextIdx + 1);
         } else {
-          setShowMistakes(true);
+          // Dotarliśmy do końca
+          const perfect = mistakes.length === 0;
+          setExerciseResults(prev => ({
+            ...prev,
+            [currentExercise.id]: {
+              completed: perfect ? 1 : 0,
+              attempted: 1
+            }
+          }));
         }
         setPendingComputerMove(null);
         return true;
@@ -179,10 +314,51 @@ const TrainingContainer: React.FC = () => {
       setPendingComputerMove("pending");
       setTimeout(() => {
         const nextIdx = currentMoveIndex + 1;
+        // Sprawdź czy był to błąd, który teraz naprawiliśmy
+        if (reviewingMistakes && mistakes.includes(currentMoveIndex) && !fixedMistakes.includes(currentMoveIndex)) {
+          setFixedMistakes((prev) => [...prev, currentMoveIndex]);
+          // Przejdź do następnego błędu
+          const nextMistakeIdx = currentMistakeIndex + 1;
+          if (nextMistakeIdx < mistakes.length) {
+            setCurrentMistakeIndex(nextMistakeIdx);
+            const nextMistake = mistakes[nextMistakeIdx];
+            const chessTemp = new Chess(currentExercise.initialFen);
+            for (let i = 0; i < nextMistake; i++) {
+              chessTemp.move(currentExercise.analysis[i].move);
+            }
+            setFen(chessTemp.fen());
+            setCurrentMoveIndex(nextMistake);
+            setPendingComputerMove(null);
+            return;
+          } else {
+            // Wszystkie błędy naprawione
+            setReviewingMistakes(false);
+            setCurrentMistakeIndex(0);
+            setFixedMistakes([]);
+            setMistakes([]);
+            // Oznacz jako completed
+            setExerciseResults(prev => ({
+              ...prev,
+              [currentExercise.id]: {
+                completed: 1,
+                attempted: 1
+              }
+            }));
+            setPendingComputerMove(null);
+            return;
+          }
+        }
         if (nextIdx < currentExercise.analysis.length) {
           const nextMove = currentExercise.analysis[nextIdx].move;
           if (["0-1", "1-0", "*", "½-½"].includes(nextMove)) {
-            setShowMistakes(true);
+            // Dotarliśmy do końca - zapisz wynik
+            setExerciseResults(prev => ({
+              ...prev,
+              [currentExercise.id]: {
+                completed: 0, // Nie poprawiliśmy jeszcze błędów
+                attempted: 1
+              }
+            }));
             setPendingComputerMove(null);
             return false;
           }
@@ -190,7 +366,15 @@ const TrainingContainer: React.FC = () => {
           setFen(chess.fen());
           setCurrentMoveIndex(nextIdx + 1);
         } else {
-          setShowMistakes(true);
+          // Dotarliśmy do końca
+          const perfect = mistakes.length === 0;
+          setExerciseResults(prev => ({
+            ...prev,
+            [currentExercise.id]: {
+              completed: perfect ? 1 : 0,
+              attempted: 1
+            }
+          }));
         }
         setPendingComputerMove(null);
       }, 500);
@@ -201,6 +385,8 @@ const TrainingContainer: React.FC = () => {
       if (!mistakes.includes(currentMoveIndex)) {
         setMistakes((prev) => [...prev, currentMoveIndex]);
       }
+      // Usuń z fixedMistakes jeśli był tam
+      setFixedMistakes((prev) => prev.filter(m => m !== currentMoveIndex));
       setTimeout(() => setBoardHighlight(null), 800);
       chess.undo();
       setFen(chess.fen());
@@ -278,6 +464,20 @@ const TrainingContainer: React.FC = () => {
     setCurrentMoveIndex(idx);
   }, []);
 
+  const startMistakeReview = useCallback(() => {
+    if (!currentExercise || mistakes.length === 0) return;
+    setReviewingMistakes(true);
+    setCurrentMistakeIndex(0);
+    setFixedMistakes([]);
+    const firstMistake = mistakes[0];
+    const chess = new Chess(currentExercise.initialFen);
+    for (let i = 0; i < firstMistake; i++) {
+      chess.move(currentExercise.analysis[i].move);
+    }
+    setFen(chess.fen());
+    setCurrentMoveIndex(firstMistake);
+  }, [currentExercise, mistakes]);
+
   const loadExercise = (exercise: Exercise) => {
     
     setCurrentExercise(exercise);
@@ -288,6 +488,11 @@ const TrainingContainer: React.FC = () => {
     setUserAnswer("");
     setScore(0);
     setTotalMoves(exercise.analysis.length);
+    setMistakes([]);
+    setFixedMistakes([]);
+    setShowMistakes(false);
+    setReviewingMistakes(false);
+    setCurrentMistakeIndex(0);
     
     if (exercise.color === 'black' || exercise.id === 'KID-black') {
 
@@ -417,24 +622,29 @@ const TrainingContainer: React.FC = () => {
   }, []);
 
   return (
-    <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal]">
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[5%] -left-[30%] w-[50rem] h-[45rem] rounded-full bg-[rgba(36,245,228,0.18)] blur-[120px]" />
-        <div className="absolute top-[-5%] right-[-10%] w-[42rem] h-[42rem] rounded-full bg-[rgba(36,245,228,0.08)] blur-[100px]" />
-        <div className="absolute top-[22%] right-[-15%] w-[35rem] h-[35rem] rounded-full bg-[rgba(36,245,228,0.15)] blur-[100px]" />
+    <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal] min-h-screen">
+      {/* Elipsy w tle w kolorze cyan */}
+      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+        <div className="absolute rounded-full" style={{ width: '120px', height: '120px', left: '5%', top: '25%', background: 'radial-gradient(circle at 30% 30%, rgba(36,245,228,0.2) 0%, rgba(36,245,228,0.15) 25%, rgba(36,245,228,0.08) 50%, rgba(36,245,228,0.03) 70%, transparent 85%)', filter: 'blur(80px)', transform: 'translate(-50%, -50%)' }} />
+        <div className="absolute rounded-full" style={{ width: '150px', height: '150px', left: '95%', top: '30%', background: 'radial-gradient(circle at 30% 30%, rgba(36,245,228,0.18) 0%, rgba(36,245,228,0.12) 25%, rgba(36,245,228,0.06) 50%, rgba(36,245,228,0.02) 70%, transparent 85%)', filter: 'blur(90px)', transform: 'translate(-50%, -50%)' }} />
+        <div className="absolute rounded-full" style={{ width: '100px', height: '100px', left: '15%', top: '75%', background: 'radial-gradient(circle at 30% 30%, rgba(36,245,228,0.16) 0%, rgba(36,245,228,0.10) 25%, rgba(36,245,228,0.05) 50%, rgba(36,245,228,0.02) 70%, transparent 85%)', filter: 'blur(75px)', transform: 'translate(-50%, -50%)' }} />
+        <div className="absolute rounded-full" style={{ width: '130px', height: '130px', left: '85%', top: '80%', background: 'radial-gradient(circle at 30% 30%, rgba(36,245,228,0.19) 0%, rgba(36,245,228,0.13) 25%, rgba(36,245,228,0.07) 50%, rgba(36,245,228,0.02) 70%, transparent 85%)', filter: 'blur(85px)', transform: 'translate(-50%, -50%)' }} />
+        <div className="absolute rounded-full" style={{ width: '110px', height: '110px', left: '50%', top: '10%', background: 'radial-gradient(circle at 30% 30%, rgba(36,245,228,0.17) 0%, rgba(36,245,228,0.11) 25%, rgba(36,245,228,0.06) 50%, rgba(36,245,228,0.02) 70%, transparent 85%)', filter: 'blur(78px)', transform: 'translate(-50%, -50%)' }} />
+        <div className="absolute rounded-full" style={{ width: '140px', height: '140px', left: '3%', top: '55%', background: 'radial-gradient(circle at 30% 30%, rgba(36,245,228,0.21) 0%, rgba(36,245,228,0.14) 25%, rgba(36,245,228,0.07) 50%, rgba(36,245,228,0.02) 70%, transparent 85%)', filter: 'blur(88px)', transform: 'translate(-50%, -50%)' }} />
+        <div className="absolute rounded-full" style={{ width: '125px', height: '125px', left: '97%', top: '60%', background: 'radial-gradient(circle at 30% 30%, rgba(36,245,228,0.18) 0%, rgba(36,245,228,0.12) 25%, rgba(36,245,228,0.06) 50%, rgba(36,245,228,0.02) 70%, transparent 85%)', filter: 'blur(82px)', transform: 'translate(-50%, -50%)' }} />
       </div>
-
-      <main className="w-full flex flex-col !pt-[0rem] !pb-[10rem] !pl-[0rem] !pr-[0rem] box-border gap-[1.2rem] max-w-full mq1225:!pb-[4rem] mq1225:box-border mq450:gap-[0.7rem] mq450:!pb-[2rem] mq450:box-border mq1525:h-auto">
-        <main className="w-full flex flex-col gap-[1.5rem] max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-[1rem] mq450:gap-[0.5rem]">
+      <main className="w-full flex flex-col !pt-[0rem] !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border gap-[1.2rem] max-w-full" style={{ position: 'relative', zIndex: 1 }}>
+        <main className="w-full flex flex-col gap-4 max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-4 mq450:gap-4">
           <div className="w-full">
             <TopBar />
           </div>
           <div className="w-full px-1">
-            <div className="flex flex-row gap-4 max-w-[1400px] mx-auto">
+            <div className="flex flex-row items-center gap-4 max-w-[1400px] mx-auto">
                              <ExerciseList
                  exercises={exercises}
                  currentExercise={currentExercise}
                  onSelect={loadExercise}
+                 exerciseResults={exerciseResults}
                />
               <TrainingBoard
                 fen={fen}
@@ -459,6 +669,10 @@ const TrainingContainer: React.FC = () => {
                 setVisionMode={fn => setVisionMode(fn)}
                 showMistakes={showMistakes}
                 mistakes={mistakes}
+                fixedMistakes={fixedMistakes}
+                reviewingMistakes={reviewingMistakes}
+                exerciseResults={exerciseResults}
+                onStartMistakeReview={startMistakeReview}
                 currentExercise={currentExercise}
                 setCurrentMoveIndex={setCurrentMoveIndex}
                 setShowMistakes={setShowMistakes}
@@ -467,6 +681,9 @@ const TrainingContainer: React.FC = () => {
                 setShowHistory={setShowHistory}
                 historyIndex={historyIndex}
                 currentMoveIndex={currentMoveIndex}
+                fen={fen}
+                onMoveInput={onMoveInput}
+                onGoToMove={onGoToMove}
               />
             </div>
           </div>

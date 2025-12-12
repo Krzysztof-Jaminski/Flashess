@@ -8,19 +8,26 @@ interface MoveHistoryProps {
   setShowHistory: (v: boolean) => void;
   historyIndex: number | null;
   currentMoveIndex: number;
+  reviewingMistakes?: boolean;
   onGoToMove?: (moveIdx: number) => void;
 }
 
-const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory, setShowHistory, historyIndex, currentMoveIndex, onGoToMove }) => {
+const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory, setShowHistory, historyIndex, currentMoveIndex, reviewingMistakes = false, onGoToMove }) => {
   if (!currentExercise) return null;
+  
+  // Wyłącz historię podczas reviewowania
+  if (reviewingMistakes && showHistory) {
+    setShowHistory(false);
+  }
+  
   if (!showHistory) return (
     <div className="flex items-center gap-2 mt-2 mb-1">
       <Buttons
         bUTTON={showHistory ? "ON" : "OFF"}
-        onLogInButtonContainerClick={() => setShowHistory(true)}
-        className={`!py-1 !px-3 !text-xs !rounded ${showHistory ? 'border-cyan-400 text-cyan-300' : ''}`}
+        onLogInButtonContainerClick={() => !reviewingMistakes && setShowHistory(true)}
+        className={`!py-1 !px-3 !text-xs !rounded ${showHistory ? 'border-cyan-400 text-cyan-300' : ''} ${reviewingMistakes ? 'opacity-50 cursor-not-allowed' : ''}`}
       />
-      {!showHistory && <span className="text-white/80 text-xs">Show history</span>}
+      {!showHistory && <span className="text-white/80 text-xs">Show history{reviewingMistakes ? ' (disabled in review)' : ''}</span>}
     </div>
   );
   const moves = currentExercise.analysis.map(a => a.move).filter(m => !["0-1", "1-0", "*", "½-½"].includes(m));
@@ -38,8 +45,13 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory,
   };
 
   return (
-    <div className="rounded p-2 mt-2 text-xs text-white/80 max-h-64 overflow-y-auto custom-scrollbar"
-      style={{ background: 'rgba(36,245,228,0.08)', border: '1.5px solid var(--blue-18)' }}>
+    <div 
+      className="rounded p-2 mt-2 text-xs text-white/80 max-h-64 overflow-y-scroll move-history-scroll"
+      style={{ background: 'rgba(36,245,228,0.08)', border: '1.5px solid var(--blue-18)' }}
+      onWheel={(e) => {
+        e.currentTarget.scrollTop += e.deltaY;
+      }}
+    >
       <div className="font-bold mb-1 flex items-center justify-between">
         <span>Move history</span>
         <div className="flex items-center gap-2">
@@ -53,7 +65,6 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory,
             onLogInButtonContainerClick={() => setShowHistory(false)}
             className={`!py-1 !px-3 !text-xs !rounded`}
           />
-          <span className="text-white/80 text-xs">Show history</span>
         </div>
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-1">
@@ -70,6 +81,14 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory,
                 if (onGoToMove) onGoToMove(moveIdx);
               }}
               title={`Pokaż pozycję po ruchu ${line}`}
+              tabIndex={0}
+              role="button"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  if (onGoToMove) onGoToMove(moveIdx);
+                }
+              }}
             >
               {line}
             </span>
