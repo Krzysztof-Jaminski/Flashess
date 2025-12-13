@@ -15,18 +15,25 @@ interface MoveHistoryProps {
 const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory, setShowHistory, historyIndex, currentMoveIndex, reviewingMistakes = false, onGoToMove }) => {
   const activeMoveRef = useRef<HTMLSpanElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  if (!currentExercise) return null;
-  
-  if (!showHistory) return (
-    <div className="flex items-center gap-2 mt-2 mb-1">
-      <Buttons
-        bUTTON={showHistory ? "ON" : "OFF"}
-        onLogInButtonContainerClick={() => !reviewingMistakes && setShowHistory(true)}
-        className={`!py-1 !px-3 !text-xs !rounded ${showHistory ? 'border-cyan-400 text-cyan-300' : ''} ${reviewingMistakes ? 'opacity-50 cursor-not-allowed' : ''}`}
-      />
-      {!showHistory && <span className="text-white/80 text-xs">Show history{reviewingMistakes ? ' (disabled in review)' : ''}</span>}
-    </div>
-  );
+
+  // Scroll to active move when it changes (only when history is shown)
+  useEffect(() => {
+    if (!showHistory || !activeMoveRef.current || !scrollContainerRef.current) return;
+
+    // Użyj setTimeout aby upewnić się że DOM został zaktualizowany
+    setTimeout(() => {
+      activeMoveRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest'
+      });
+    }, 0);
+  }, [showHistory, currentMoveIndex, historyIndex]); // Added showHistory to dependencies
+
+  if (!currentExercise) {
+    return null;
+  }
+
   const moves = currentExercise.analysis.map(a => a.move).filter(m => !["0-1", "1-0", "*", "½-½"].includes(m));
   let out: string[] = [];
   for (let i = 0; i < moves.length; i += 2) {
@@ -73,25 +80,24 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory,
   // Stała wysokość - taka sama jak gdy jest pusty (nagłówek + tekst + padding)
   const fixedHeight = 120; // wysokość wystarczająca dla pustego boxa
 
-  // Scroll do aktywnego ruchu gdy się zmienia
-  useEffect(() => {
-    if (activeMoveRef.current && scrollContainerRef.current) {
-      // Użyj setTimeout aby upewnić się że DOM został zaktualizowany
-      setTimeout(() => {
-        activeMoveRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-          inline: 'nearest'
-        });
-      }, 0);
-    }
-  }, [activeIndex, visiblePairs.length]);
+  if (!showHistory) {
+    return (
+      <div className="flex items-center gap-2 mt-2 mb-1">
+        <Buttons
+          bUTTON={showHistory ? "ON" : "OFF"}
+          onLogInButtonContainerClick={() => !reviewingMistakes && setShowHistory(true)}
+          className={`!py-1 !px-3 !text-xs !rounded ${showHistory ? 'border-cyan-400 text-cyan-300' : ''} ${reviewingMistakes ? 'opacity-50 cursor-not-allowed' : ''}`}
+        />
+        {!showHistory && <span className="text-white/80 text-xs">Show history{reviewingMistakes ? ' (disabled in review)' : ''}</span>}
+      </div>
+    );
+  }
 
   return (
-    <div 
+    <div
       className="rounded p-2 mt-2 text-xs text-white/80"
-      style={{ 
-        background: 'rgba(36,245,228,0.08)', 
+      style={{
+        background: 'rgba(36,245,228,0.08)',
         border: '1.5px solid var(--blue-18)',
         height: `${fixedHeight}px`,
         overflow: 'hidden',
@@ -119,10 +125,10 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory,
           Showing moves around current position ({startIdx + 1}-{endIdx} of {totalPairs})
         </div>
       )}
-      <div 
+      <div
         ref={scrollContainerRef}
         className="flex flex-wrap gap-x-3 gap-y-1 move-history-scroll"
-        style={{ 
+        style={{
           overflowY: 'auto',
           overflowX: 'auto',
           flex: '1',
@@ -137,7 +143,7 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory,
             <span
               key={actualIdx}
               ref={isActive ? activeMoveRef : null}
-              className={isActive ? "font-bold cursor-pointer" : "cursor-pointer hover:text-cyan-300"}
+              className={`move-history-item ${isActive ? "font-bold cursor-pointer" : "cursor-pointer hover:text-cyan-300"}`}
               style={isActive ? { color: 'var(--blue-84)' } : {}}
               onClick={() => {
                 if (onGoToMove) onGoToMove(moveIdx);

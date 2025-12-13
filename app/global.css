@@ -321,3 +321,18 @@ select:focus-visible {
   outline: 2px solid rgba(36,245,228,0.84) !important;
   outline-offset: 2px !important;
 }
+
+/* Podkreślenie dla elementów historii ruchów zamiast prostokąta - zawsze cyanowe */
+.move-history-item:focus-visible,
+.move-history-item:focus,
+.move-history-item[tabindex]:focus-visible,
+.move-history-item[tabindex]:focus,
+.move-history-item[role="button"]:focus-visible,
+.move-history-item[role="button"]:focus {
+  outline: none !important;
+  text-decoration: underline !important;
+  text-decoration-color: rgba(36,245,228,0.84) !important;
+  text-decoration-thickness: 2px !important;
+  text-underline-offset: 2px !important;
+  box-shadow: none !important;
+}

@@ -846,7 +846,7 @@ const CreationPage: NextPage = () => {
                       <span 
                         key={actualIdx}
                         ref={isActive ? activeMoveRef : null}
-                        className={isActive ? "text-cyan-400 font-bold cursor-pointer" : "cursor-pointer hover:text-cyan-300"}
+                        className={`move-history-item ${isActive ? "text-cyan-400 font-bold cursor-pointer" : "cursor-pointer hover:text-cyan-300"}`}
                         onClick={() => {
                           goToHistoryIndex(moveIdx);
                         }}
@@ -1391,7 +1391,7 @@ const CreationPage: NextPage = () => {
                     return popularMoves.map((move, index) => (
                       <div
                         key={index}
-                        className={`p-3 rounded cursor-pointer transition-colors ${
+                        className={`move-history-item p-3 rounded cursor-pointer transition-colors ${
                           selectedMove === move.move
                             ? "bg-cyan-400/30 border border-cyan-400/50"
                             : "bg-white/10 hover:bg-white/15"
