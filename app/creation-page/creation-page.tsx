@@ -62,6 +62,8 @@ const CreationPage: NextPage = () => {
   const boardContainerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const rightClickStartRef = useRef<{ x: number; y: number } | null>(null);
+  const activeMoveRef = useRef<HTMLSpanElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
 
 
@@ -231,6 +233,20 @@ const CreationPage: NextPage = () => {
     setGame(chess);
     setHistoryIndex(idx);
   };
+
+  // Scroll do aktywnego ruchu gdy się zmienia
+  useEffect(() => {
+    if (activeMoveRef.current && scrollContainerRef.current && moveHistory.length > 0) {
+      // Użyj setTimeout aby upewnić się że DOM został zaktualizowany
+      setTimeout(() => {
+        activeMoveRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest'
+        });
+      }, 0);
+    }
+  }, [historyIndex, moveHistory.length]);
 
 
 
@@ -422,13 +438,22 @@ const CreationPage: NextPage = () => {
     
     // Jeśli użytkownik jest zalogowany, zapisz również do backendu (cicho, bez błędów)
     if (authApi.isAuthenticated()) {
-      await exercisesApi.create({
+      const backendExercise = await exercisesApi.create({
         name: finalName,
         initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
         pgn,
         color: customColor,
         isPublic: isPublic,
       });
+      // Jeśli zapisanie do backendu się udało, zaktualizuj lokalne ćwiczenie z ID z backendu
+      if (backendExercise && backendExercise.id) {
+        const updatedExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
+        const exerciseIndex = updatedExercises.findIndex((ex: any) => ex.id === newExercise.id);
+        if (exerciseIndex !== -1) {
+          updatedExercises[exerciseIndex].backendId = backendExercise.id;
+          localStorage.setItem('customExercises', JSON.stringify(updatedExercises));
+        }
+      }
       // Nie pokazujemy błędu jeśli się nie uda - lokalne zapisanie się udało
     }
     
@@ -483,13 +508,22 @@ const CreationPage: NextPage = () => {
     
     // Jeśli użytkownik jest zalogowany, zapisz również do backendu (cicho, bez błędów)
     if (authApi.isAuthenticated()) {
-      await exercisesApi.create({
+      const backendExercise = await exercisesApi.create({
         name: finalName,
         initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
         pgn: cleanPgn,
         color: customColor,
         isPublic: isPublic,
       });
+      // Jeśli zapisanie do backendu się udało, zaktualizuj lokalne ćwiczenie z ID z backendu
+      if (backendExercise && backendExercise.id) {
+        const updatedExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
+        const exerciseIndex = updatedExercises.findIndex((ex: any) => ex.id === newExercise.id);
+        if (exerciseIndex !== -1) {
+          updatedExercises[exerciseIndex].backendId = backendExercise.id;
+          localStorage.setItem('customExercises', JSON.stringify(updatedExercises));
+        }
+      }
       // Nie pokazujemy błędu jeśli się nie uda - lokalne zapisanie się udało
     }
     
@@ -566,13 +600,20 @@ const CreationPage: NextPage = () => {
     // Jeśli to lokalne ćwiczenie (string ID)
     if (typeof exerciseId === 'string' && exerciseId.startsWith('custom-')) {
       const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
+      const exerciseToDelete = customExercises.find((ex: any) => ex.id === exerciseId);
       const filtered = customExercises.filter((ex: any) => ex.id !== exerciseId);
       localStorage.setItem('customExercises', JSON.stringify(filtered));
       setCustomExercises(filtered);
+      
+      // Jeśli ćwiczenie ma backendId, usuń również z backendu
+      if (exerciseToDelete && exerciseToDelete.backendId && authApi.isAuthenticated()) {
+        await exercisesApi.delete(exerciseToDelete.backendId);
+      }
     } else if (typeof exerciseId === 'number') {
       // Jeśli to ćwiczenie z backendu - usuń lokalnie i spróbuj z backendu (cicho)
       const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
-      const filtered = customExercises.filter((ex: any) => ex.id !== exerciseId);
+      // Usuń zarówno po id jak i po backendId
+      const filtered = customExercises.filter((ex: any) => ex.id !== exerciseId && ex.backendId !== exerciseId);
       localStorage.setItem('customExercises', JSON.stringify(filtered));
       setCustomExercises(filtered);
       
@@ -587,6 +628,7 @@ const CreationPage: NextPage = () => {
   // Function to load custom exercises from both localStorage and backend
   const loadCustomExercises = async () => {
     const allExercises: any[] = [];
+    const seenIds = new Set<string | number>();
     
     // Załaduj WSZYSTKIE ćwiczenia z localStorage (wspólne dla urządzenia, niezależnie od użytkownika)
     try {
@@ -594,7 +636,14 @@ const CreationPage: NextPage = () => {
       // Upewnij się, że wszystkie ćwiczenia są załadowane - każda gra to oddzielne ćwiczenie
       if (Array.isArray(localExercisesRaw) && localExercisesRaw.length > 0) {
         // Dodaj wszystkie ćwiczenia z localStorage
-        allExercises.push(...localExercisesRaw);
+        localExercisesRaw.forEach((ex: any) => {
+          // Użyj backendId jeśli istnieje, w przeciwnym razie użyj id
+          const id = ex.backendId || ex.id;
+          if (!seenIds.has(id)) {
+            seenIds.add(id);
+            allExercises.push(ex);
+          }
+        });
       }
     } catch (e) {
       // Cicho obsłuż błąd
@@ -606,16 +655,30 @@ const CreationPage: NextPage = () => {
       try {
         const backendExercises = await exercisesApi.getMyExercises();
         if (backendExercises && Array.isArray(backendExercises) && backendExercises.length > 0) {
-          // Dodaj wszystkie ćwiczenia z backendu (każda gra to oddzielne ćwiczenie)
-          // Nie sprawdzamy duplikatów - pokazujemy wszystkie
-          allExercises.push(...backendExercises);
+          // Dodaj ćwiczenia z backendu tylko jeśli nie są już w localStorage
+          backendExercises.forEach((backendEx: any) => {
+            // Sprawdź czy ćwiczenie z backendu już istnieje w localStorage (po ID lub po PGN + color)
+            const existsInLocal = allExercises.some((localEx: any) => {
+              // Sprawdź po backendId
+              if (localEx.backendId === backendEx.id) return true;
+              // Sprawdź po PGN + color (normalizuj PGN dla porównania)
+              const normalizePgn = (pgn: string) => pgn.trim().replace(/\s+/g, ' ');
+              return normalizePgn(localEx.pgn || '') === normalizePgn(backendEx.pgn || '') &&
+                     (localEx.color || 'white') === (backendEx.color || 'white');
+            });
+            
+            if (!existsInLocal && !seenIds.has(backendEx.id)) {
+              seenIds.add(backendEx.id);
+              allExercises.push(backendEx);
+            }
+          });
         }
       } catch (e) {
         // Cicho obsłuż błąd backendu
       }
     }
     
-    // Ustaw wszystkie ćwiczenia (lokalne + z serwera)
+    // Ustaw wszystkie ćwiczenia (lokalne + z serwera, bez duplikatów)
     setCustomExercises(allExercises);
   };
 
@@ -671,8 +734,8 @@ const CreationPage: NextPage = () => {
 
   // Render move history
   const renderMoveHistory = () => {
-    // Maksymalna liczba par ruchów do wyświetlenia (np. 12 par = 24 ruchy)
-    const MAX_VISIBLE_MOVE_PAIRS = 12;
+    // Maksymalna liczba par ruchów do wyświetlenia wokół aktualnego historyIndex
+    const MAX_VISIBLE_PAIRS_AROUND = 7; // 7 par przed i 7 par po = 14 par total
     
     return (
       <div>
@@ -721,15 +784,32 @@ const CreationPage: NextPage = () => {
               out.push(`${num}. ${white} ${black}`.trim());
             }
             
-            // Jeśli historia jest długa, pokaż tylko ostatnie N par ruchów
             const totalPairs = out.length;
-            const isHistoryLong = totalPairs > MAX_VISIBLE_MOVE_PAIRS;
-            const visiblePairs = isHistoryLong 
-              ? out.slice(-MAX_VISIBLE_MOVE_PAIRS)
-              : out;
-            const startPairNumber = isHistoryLong 
-              ? totalPairs - MAX_VISIBLE_MOVE_PAIRS + 1
-              : 1;
+            const isHistoryLong = totalPairs > MAX_VISIBLE_PAIRS_AROUND * 2;
+            
+            // Określ które pary ruchów pokazać
+            let visiblePairs: string[] = [];
+            let startIdx = 0;
+            let endIdx = totalPairs;
+            
+            // Użyj historyIndex jeśli dostępny, w przeciwnym razie moveHistory.length
+            const activeIndex = historyIndex !== null ? historyIndex : moveHistory.length;
+            
+            if (isHistoryLong) {
+              // Oblicz indeks pary dla aktualnego indeksu
+              const currentPairIdx = Math.floor(activeIndex / 2);
+              
+              // Oblicz zakres do pokazania (centruj wokół currentPairIdx)
+              const startPairIdx = Math.max(0, currentPairIdx - MAX_VISIBLE_PAIRS_AROUND);
+              const endPairIdx = Math.min(totalPairs, currentPairIdx + MAX_VISIBLE_PAIRS_AROUND + 1);
+              
+              visiblePairs = out.slice(startPairIdx, endPairIdx);
+              startIdx = startPairIdx;
+              endIdx = endPairIdx;
+            } else {
+              // Jeśli historia jest krótka, pokaż wszystkie
+              visiblePairs = out;
+            }
             
             // Dodaj informację o wariantach jeśli historyIndex > moveHistory.length
             let variantInfo = "";
@@ -740,21 +820,45 @@ const CreationPage: NextPage = () => {
             return (
               <div 
                 className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-2 text-xs text-white/80"
-                style={{ minHeight: '60px', maxHeight: '200px', overflow: 'hidden' }}
+                style={{ minHeight: '60px', maxHeight: '200px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
               >
                 <div className="font-bold mb-1">Move History</div>
                 {isHistoryLong && (
                   <div className="text-white/50 text-xs mb-1">
-                    Showing last {MAX_VISIBLE_MOVE_PAIRS} moves (total: {totalPairs})
+                    Showing moves around current position ({startIdx + 1}-{endIdx} of {totalPairs})
                   </div>
                 )}
-                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                <div 
+                  ref={scrollContainerRef}
+                  className="flex flex-wrap gap-x-3 gap-y-1 move-history-scroll"
+                  style={{ 
+                    overflowY: 'auto',
+                    overflowX: 'auto',
+                    flex: '1',
+                    maxHeight: '100%'
+                  }}
+                >
                   {visiblePairs.map((line, idx) => {
-                    const actualIdx = isHistoryLong ? startPairNumber - 1 + idx : idx;
+                    const actualIdx = isHistoryLong ? startIdx + idx : idx;
+                    const moveIdx = Math.min((actualIdx + 1) * 2, moveHistory.length);
+                    const isActive = activeIndex <= moveIdx && activeIndex > moveIdx - 2;
                     return (
                       <span 
-                        key={actualIdx} 
-                        className={historyIndex !== null && Math.floor(historyIndex/2) === actualIdx ? "text-cyan-400 font-bold" : ""}
+                        key={actualIdx}
+                        ref={isActive ? activeMoveRef : null}
+                        className={isActive ? "text-cyan-400 font-bold cursor-pointer" : "cursor-pointer hover:text-cyan-300"}
+                        onClick={() => {
+                          goToHistoryIndex(moveIdx);
+                        }}
+                        title={`Pokaż pozycję po ruchu ${line}`}
+                        tabIndex={0}
+                        role="button"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            goToHistoryIndex(moveIdx);
+                          }
+                        }}
                       >
                         {line}
                       </span>
@@ -764,7 +868,7 @@ const CreationPage: NextPage = () => {
                     <span className="text-yellow-400 italic">{variantInfo}</span>
                   )}
                 </div>
-                <div className="mt-1 text-white/50 text-xs">
+                <div className="mt-1 text-white/50 text-xs" style={{ flexShrink: 0 }}>
                   Use ←/→ arrows to browse history{variantInfo ? " • Current position is a variant" : ""}
                 </div>
               </div>
@@ -796,7 +900,7 @@ const CreationPage: NextPage = () => {
           <div className="w-full px-1" style={{ marginTop: '0.5rem' }}>
             <div className="flex flex-row justify-center items-start gap-4 max-w-[1400px] mx-auto">
               {/* Left: Add custom exercise */}
-              <div className="w-[300px] flex-shrink-0 glass-panel rounded-lg p-3 pt-2 flex flex-col" style={{ marginTop: '0', minHeight: 705, alignSelf: 'flex-start' }}>
+              <div className="glass-panel w-[300px] rounded-lg p-4 flex flex-col" style={{ height: 717, marginTop: 0, alignSelf: 'flex-start', justifyContent: 'flex-start', overflow: 'hidden' }}>
                 <h3 className="text-lg text-cyan-300 mb-3 text-center">Add your own exercise</h3>
                 {/* Vision Mode Toggle Button */}
                 <div className="mb-3">
@@ -1001,8 +1105,8 @@ const CreationPage: NextPage = () => {
                 {renderMoveHistory()}
               </div>
               {/* Center: Chessboard */}
-              <div className="flex flex-col items-center justify-center flex-shrink-0">
-                <div className="glass-panel-no-filter rounded-lg p-4 flex items-center justify-center" style={{ width: 716, minHeight: 705, marginTop: '0', alignSelf: 'flex-start' }}>
+              <div className="flex flex-col items-center justify-center">
+                <div className="glass-panel-no-filter rounded-lg p-4 flex items-center justify-center" style={{ width: 716, height: 717, marginTop: 0, alignSelf: 'flex-start' }}>
                   <div ref={boardContainerRef} style={{ width: 700, height: 700, position: 'relative' }}>
                     <Chessboard
                       position={game.fen()}
@@ -1026,8 +1130,8 @@ const CreationPage: NextPage = () => {
                 </div>
               </div>
               {/* Right: Popular Moves with Opening Tree Integration */}
-              <div className="w-[300px] flex-shrink-0 glass-panel rounded-lg p-3 pt-2 flex flex-col" style={{ marginTop: '0', minHeight: 705, alignSelf: 'flex-start' }}>
-                <div className="mb-3">
+              <div className="glass-panel w-[300px] rounded-lg p-4 flex flex-col" style={{ height: 717, marginTop: 0, alignSelf: 'flex-start', overflow: 'hidden' }}>
+                <div className="mb-3 flex-shrink-0">
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <Buttons
                       bUTTON={showCustomExercises ? "Show Moves" : `Custom Exercises (${customExercises.length})`}
@@ -1058,55 +1162,61 @@ const CreationPage: NextPage = () => {
                 </div>
                 
                 {!showCustomExercises && (
-                  <MoveInput 
-                    fen={game.fen()} 
-                    onMove={(moveText) => {
-                      try {
-                        const newGame = new Chess(game.fen());
-                        const move = newGame.move(moveText);
-                        if (move) {
-                          const algebraicMove = move.san;
-                          
-                          // Sprawdź czy jesteśmy na ostatnim ruchu historii
-                          const isAtLatestMove = historyIndex === null || historyIndex === moveHistory.length;
-                          
-                          if (isAtLatestMove) {
-                            // Dodaj do historii tylko jeśli jesteśmy na ostatnim ruchu
-                            setMoveHistory(prev => {
-                              const newLength = prev.length + 1;
-                              setHistoryIndex(newLength);
-                              return [...prev, algebraicMove];
-                            });
-                          } else {
-                            // Jeśli nie jesteśmy na końcu, zaktualizuj historyIndex
-                            setHistoryIndex(prev => prev !== null ? prev + 1 : 1);
+                  <div className="flex-shrink-0 mb-2">
+                    <MoveInput 
+                      fen={game.fen()} 
+                      onMove={(moveText) => {
+                        try {
+                          const newGame = new Chess(game.fen());
+                          const move = newGame.move(moveText);
+                          if (move) {
+                            const algebraicMove = move.san;
+                            
+                            // Sprawdź czy jesteśmy na ostatnim ruchu historii
+                            const isAtLatestMove = historyIndex === null || historyIndex === moveHistory.length;
+                            
+                            if (isAtLatestMove) {
+                              // Dodaj do historii tylko jeśli jesteśmy na ostatnim ruchu
+                              setMoveHistory(prev => {
+                                const newLength = prev.length + 1;
+                                setHistoryIndex(newLength);
+                                return [...prev, algebraicMove];
+                              });
+                            } else {
+                              // Jeśli nie jesteśmy na końcu, zaktualizuj historyIndex
+                              setHistoryIndex(prev => prev !== null ? prev + 1 : 1);
+                            }
+                            
+                            setGame(newGame);
+                            return true;
                           }
-                          
-                          setGame(newGame);
-                          return true;
+                          return false;
+                        } catch {
+                          return false;
                         }
-                        return false;
-                      } catch {
-                        return false;
-                      }
-                    }}
-                  />
+                      }}
+                    />
+                  </div>
                 )}
                 
                 {showCustomExercises ? (
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1 min-h-0 flex flex-col">
                     <div 
-                      className="space-y-2 overflow-y-scroll exercise-list-scroll"
-                      style={{ maxHeight: '792px' }}
+                      className="space-y-2 overflow-y-auto exercise-list-scroll flex-1 min-h-0"
+                      style={{ maxHeight: '100%' }}
                     >
                       {customExercises.length === 0 ? (
                         <div className="text-xs text-white/60 p-2">No exercises yet. Create one above!</div>
                       ) : (
                         customExercises.map((exercise) => {
                           const isBlack = exercise.color === 'black';
+                          // Użyj backendId jeśli istnieje, w przeciwnym razie id (dla unikalności klucza React)
+                          const uniqueKey = (exercise as any).backendId || exercise.id;
+                          // Użyj backendId do usuwania jeśli istnieje, w przeciwnym razie id
+                          const deleteId = (exercise as any).backendId || exercise.id;
                           return (
                             <div
-                              key={exercise.id}
+                              key={uniqueKey}
                               className="p-2 rounded cursor-pointer transition-colors font-['Russo_One']"
                               style={{ background: 'rgba(255,255,255,0.1)' }}
                               onClick={() => loadExerciseToBoard(exercise)}
@@ -1146,7 +1256,7 @@ const CreationPage: NextPage = () => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    deleteCustomExercise(exercise.id);
+                                    deleteCustomExercise(deleteId);
                                   }}
                                   className="px-2 py-1 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-xs hover:bg-red-500/30 transition-colors"
                                   tabIndex={0}
@@ -1170,18 +1280,16 @@ const CreationPage: NextPage = () => {
                   </div>
                 ) : (
                   <div 
-                    className="space-y-2 overflow-y-scroll exercise-list-scroll"
-                    style={{ maxHeight: '792px' }}
+                    className="space-y-2 exercise-list-scroll flex-1 min-h-0"
+                    style={{ 
+                      overflowY: 'auto',
+                      overflowX: 'hidden'
+                    }}
                   >
                     {/* Popular Moves from Study Database + User Exercises */}
                     {isClient ? (() => {
-                    // Użyj studyGames z state (załadowane po hydratacji)
-                    // Dodaj ćwiczenia użytkownika i publiczne ćwiczenia z backendu
-                    const allGames = [
-                      ...studyGames, 
-                      ...customExercises,
-                      ...publicExercises
-                    ];
+                    // Użyj getExercises() tak jak w training page - to zapewnia deduplikację i pokazuje tylko te ćwiczenia, które są w training page
+                    const allGames = getExercises();
                     
                     // refreshTrigger wymusza re-render gdy dodamy nowe ćwiczenie
                     const _ = refreshTrigger;

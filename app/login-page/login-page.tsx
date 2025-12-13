@@ -10,8 +10,8 @@ import AnimatedBackground from "../../components/AnimatedBackground";
 
 const LoginPage: NextPage = () => {
   const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("string");
+  const [password, setPassword] = useState("string");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -183,6 +183,12 @@ const LoginPage: NextPage = () => {
                   bUTTONTextShadow="unset"
                   onLogInButtonContainerClick={handleLogin}
                 />
+              </div>
+
+              <div className="mt-4 text-center">
+                <p className="text-[10px] text-white/40">
+                  userexample: string | examplepass: string
+                </p>
               </div>
             </div>
           </div>

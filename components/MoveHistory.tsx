@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import Buttons from "./buttons";
 import { Exercise } from "../utils/exercises";
 
@@ -13,6 +13,8 @@ interface MoveHistoryProps {
 }
 
 const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory, setShowHistory, historyIndex, currentMoveIndex, reviewingMistakes = false, onGoToMove }) => {
+  const activeMoveRef = useRef<HTMLSpanElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   if (!currentExercise) return null;
   
   if (!showHistory) return (
@@ -70,7 +72,21 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory,
 
   // Stała wysokość - taka sama jak gdy jest pusty (nagłówek + tekst + padding)
   const fixedHeight = 120; // wysokość wystarczająca dla pustego boxa
-  
+
+  // Scroll do aktywnego ruchu gdy się zmienia
+  useEffect(() => {
+    if (activeMoveRef.current && scrollContainerRef.current) {
+      // Użyj setTimeout aby upewnić się że DOM został zaktualizowany
+      setTimeout(() => {
+        activeMoveRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest'
+        });
+      }, 0);
+    }
+  }, [activeIndex, visiblePairs.length]);
+
   return (
     <div 
       className="rounded p-2 mt-2 text-xs text-white/80"
@@ -104,9 +120,11 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory,
         </div>
       )}
       <div 
-        className="flex flex-wrap gap-x-3 gap-y-1"
+        ref={scrollContainerRef}
+        className="flex flex-wrap gap-x-3 gap-y-1 move-history-scroll"
         style={{ 
-          overflow: 'hidden',
+          overflowY: 'auto',
+          overflowX: 'auto',
           flex: '1',
           maxHeight: '100%'
         }}
@@ -118,6 +136,7 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({ currentExercise, showHistory,
           return (
             <span
               key={actualIdx}
+              ref={isActive ? activeMoveRef : null}
               className={isActive ? "font-bold cursor-pointer" : "cursor-pointer hover:text-cyan-300"}
               style={isActive ? { color: 'var(--blue-84)' } : {}}
               onClick={() => {

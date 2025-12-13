@@ -168,9 +168,17 @@ const TopBar: NextPage<TopBarType> = ({ className = "" }) => {
         <div className="hidden xl:flex items-center gap-10 z-[2]">
           {isAuthenticated ? (
             <>
-              <div className="text-white text-sm">
-                <span className="text-cyan-400">Logged in as:</span> {currentUser?.username || 'User'}
-              </div>
+              <Buttons
+                property1="Default"
+                className="flex-shrink-0 px-4 transition-all duration-150 cursor-default"
+                bUTTONColor="#fff"
+                bUTTONTextShadow="unset"
+                onLogInButtonContainerClick={() => {}}
+              >
+                <span className="font-['Russo_One'] text-white">
+                  Profile: <span style={{ color: 'rgba(36,245,228,0.84)' }}>{currentUser?.username || 'User'}</span>
+                </span>
+              </Buttons>
               <Buttons
                 property1="Default"
                 onLogInButtonContainerClick={handleLogout}
@@ -258,10 +266,17 @@ const TopBar: NextPage<TopBarType> = ({ className = "" }) => {
             />
             {isAuthenticated ? (
               <>
-                <div className="text-white text-xs text-center px-2">
-                  <span className="text-cyan-400">Logged in:</span><br />
-                  {currentUser?.username || 'User'}
-                </div>
+                <Buttons
+                  property1="Default"
+                  className="flex-shrink-0 px-4 transition-all duration-150 cursor-default !text-xs"
+                  bUTTONColor="#fff"
+                  bUTTONTextShadow="unset"
+                  onLogInButtonContainerClick={() => {}}
+                >
+                  <span className="font-['Russo_One'] text-white">
+                    Profile: <span style={{ color: 'rgba(36,245,228,0.84)' }}>{currentUser?.username || 'User'}</span>
+                  </span>
+                </Buttons>
                 <div
                   className="text-White font-['Russo_One'] cursor-pointer hover:text-cyan-400"
                   onClick={handleLogout}
