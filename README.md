@@ -1,32 +1,47 @@
-# Flashess - Chess Training Application
+# Flashess - Chess Training Platform
 
 ## Overview
-Flashess is a comprehensive chess training application built with Next.js, React, and TypeScript. It features multiple training modes, custom exercise creation, and an advanced opening tree system.
+Flashess is a comprehensive chess training platform built with Next.js 14, React 18, and .NET 9.0. The application features advanced training modes, custom exercise creation, vision training capabilities, and a complete opening tree system. Currently hosted at [flashess.eu](https://flashess.eu) with backend running on Microsoft Azure.
+
+### Current Status
+- **Frontend**: Live at flashess.eu
+- **Backend**: Deployed on Microsoft Azure
+- **Database**: SQLite (production-ready, can be migrated to PostgreSQL)
 
 ## Features
 
-### 🎯 Training Modes
-- **Training Page**: Interactive chess training with move validation
-- **Creation Page**: Create and manage custom chess exercises
-- **Opening Tree**: Comprehensive opening theory with variations
+### Training Modes
+- **Interactive Training**: Full chess training with real-time move validation
+- **Random Mode**: Automatic random exercise selection
+- **Vision Training**: Enhanced board visualization showing attacked squares
+- **Hint Mode**: Get hints for difficult positions
+- **Auto-start Moves**: Skip opening moves for faster training
+- **Mistake Review**: Analyze and review incorrect moves
+- **Move History Navigation**: Browse through game history with arrow keys
 
-### 🔐 User Authentication
-- **Registration**: Create new user accounts
-- **Login**: Secure JWT-based authentication
-- **User Profiles**: Manage your exercises across devices
+### User Authentication
+- **Standard Registration/Login**: Email and password authentication
+- **Google OAuth**: Sign in with Google account
+- **Apple Sign-In**: Apple ID authentication
+- **SMS Verification**: Phone number login with SMS codes
+- **JWT Tokens**: Secure authentication with refresh tokens
+- **Cross-device Sync**: Manage exercises across all your devices
 
-### 💾 Data Storage
+### Data Storage
 - **Local Storage**: Exercises always saved locally (works offline)
 - **Backend Sync**: Optional cloud sync when logged in
 - **Public Exercises**: Share your exercises with the community
 
-### 🏗️ Creation Mode
-- **Custom Exercise Builder**: Create exercises from PGN notation
-- **Opening Tree Integration**: Real-time opening theory suggestions
-- **Move History Management**: Track and analyze game progress
-- **Vision Mode**: Enhanced board visualization
+### Creation Mode
+- **PGN Import**: Load games from Lichess and other platforms
+- **Custom Position Builder**: Create exercises from any board position
+- **Opening Tree Integration**: Real-time theoretical move suggestions
+- **Move History Management**: Full game analysis with variation support
+- **Vision Mode**: Enhanced board visualization for position analysis
+- **Square Marking**: Right-click to mark important squares
+- **Dual Storage**: Local storage + cloud synchronization
 
-### 🌳 Opening Tree System
+### Opening Tree System
 The opening tree provides:
 - **Real-time Analysis**: Shows theoretical moves for any position
 - **Variation Explorer**: Deep dive into opening variations
@@ -34,7 +49,7 @@ The opening tree provides:
 - **Main Line Highlighting**: Identifies principal variations
 - **Configurable Depth**: Adjust tree depth (2-5 moves)
 
-### 🎨 UI Components
+### UI Components
 - **Responsive Design**: Works on desktop and mobile
 - **Modern Interface**: Clean, intuitive user experience
 - **Custom Scrollbars**: Consistent styling across browsers
@@ -42,34 +57,65 @@ The opening tree provides:
 
 ## Technical Stack
 
-- **Frontend**: Next.js 14, React 18, TypeScript
-- **Backend**: .NET 9.0 Web API with Entity Framework Core (separate repository)
-- **Styling**: Tailwind CSS with custom design system
-- **Chess Engine**: chess.js for game logic
-- **Board Component**: react-chessboard for chess visualization
-- **State Management**: React hooks, local storage, and backend API
+### Backend (.NET 9.0)
+- **Framework**: ASP.NET Core 9.0 Web API
+- **ORM**: Entity Framework Core 9.0
+- **Database**: SQLite (production-ready, migratable to PostgreSQL/MySQL)
+- **Authentication**: JWT Bearer tokens with multiple OAuth providers
+- **Security**: BCrypt password hashing, CORS configuration
+- **Documentation**: Swagger/OpenAPI
+- **Hosting**: Microsoft Azure
+
+### Frontend (Next.js 14)
+- **Framework**: Next.js 14 with App Router
+- **React**: React 18 with TypeScript
+- **Styling**: Tailwind CSS 4.x with custom design system
+- **Chess Engine**: chess.js for game logic and PGN parsing
+- **Board Component**: react-chessboard with custom styling
+- **State Management**: React hooks + localStorage + API integration
+- **Animations**: Framer Motion for smooth transitions
+- **Hosting**: flashess.eu domain
 
 ## Project Structure
 
 ```
 Flashess/
-├── app/                    # Next.js app directory
-│   ├── creation-page/     # Exercise creation interface
-│   ├── training-page/     # Training mode interface
-│   ├── login-page/        # User login
-│   ├── register-page/     # User registration
-│   └── layout.tsx         # Root layout
-├── components/            # Reusable React components
-│   ├── OpeningTree.tsx   # Opening tree component
-│   ├── TrainingBoard.tsx # Chess training board
-│   └── ...               # Other components
-├── utils/                 # Utility functions and data
-│   ├── api.ts            # Backend API client
-│   ├── apiConfig.ts      # Backend API configuration
-│   ├── exercises.json    # Opening database
-│   ├── exercises.ts      # Exercise logic
-│   └── ...               # Other utilities
-└── public/               # Static assets
+├── Flashess-Backend/              # .NET 9.0 Web API
+│   ├── Controllers/               # API Controllers
+│   │   ├── AuthController.cs      # Authentication endpoints
+│   │   └── ExercisesController.cs # Exercise management
+│   ├── Models/                    # Entity Framework models
+│   │   ├── User.cs               # User model
+│   │   ├── Exercise.cs           # Exercise model
+│   │   └── PhoneVerification.cs  # SMS verification
+│   ├── Services/                  # Business logic
+│   │   ├── AuthService.cs        # Authentication service
+│   │   ├── OAuthService.cs       # OAuth integrations
+│   │   └── ExerciseService.cs    # Exercise operations
+│   ├── DTOs/                     # Data transfer objects
+│   └── Program.cs                # Application startup
+│
+└── Flashess-Client/               # Next.js Frontend
+    ├── app/                       # Next.js App Router
+    │   ├── home-page.tsx          # Landing page
+    │   ├── training-page/         # Training interface
+    │   ├── creation-page/         # Exercise creation
+    │   ├── login-page/            # Authentication
+    │   ├── register-page/         # User registration
+    │   └── layout.tsx             # Root layout
+    ├── components/                # React components
+    │   ├── TrainingBoard.tsx      # Chess board component
+    │   ├── ExerciseList.tsx       # Exercise management
+    │   ├── RightPanel.tsx         # Training controls
+    │   ├── VisionMode.tsx         # Board visualization
+    │   ├── MoveHistory.tsx        # Game history
+    │   └── ...
+    ├── utils/                     # Utilities and data
+    │   ├── api.ts                 # API client
+    │   ├── exercises.ts           # Exercise logic
+    │   ├── exercises.json         # Opening database
+    │   └── apiConfig.ts           # API configuration
+    └── public/                    # Static assets
 ```
 
 ## Getting Started
@@ -90,7 +136,35 @@ npm run dev
 
 Frontend będzie dostępny na `http://localhost:3000`.
 
-**Note**: Backend is in a separate repository. See the backend repository for setup instructions. The frontend works with local storage even without the backend.
+### Backend Setup (.NET 9.0)
+
+```bash
+cd Flashess-Backend
+dotnet restore
+dotnet run
+```
+
+Backend będzie dostępny na `http://localhost:5000`.
+
+**Note**: Frontend działa w pełni funkcjonalnie z localStorage nawet bez backendu. Backend dodaje synchronizację między urządzeniami i ćwiczenia publiczne.
+
+## API Endpoints
+
+### Authentication
+- `POST /auth/register` - User registration
+- `POST /auth/login` - Standard login
+- `POST /auth/google` - Google OAuth login
+- `POST /auth/apple` - Apple Sign-In
+- `POST /auth/phone/send-code` - Send SMS verification
+- `POST /auth/phone/verify` - Verify SMS code
+
+### Exercises
+- `POST /exercises` - Create exercise (authenticated)
+- `GET /exercises/my` - Get user's exercises (authenticated)
+- `GET /exercises/public` - Get public exercises
+- `GET /exercises/{id}` - Get specific exercise (authenticated)
+- `PATCH /exercises/{id}` - Update exercise (authenticated)
+- `DELETE /exercises/{id}` - Delete exercise (authenticated)
 
 ### Usage
 
@@ -122,6 +196,33 @@ The application includes a comprehensive database of chess openings:
 - **Statistics**: Realistic win rates and evaluations
 - **Depth**: Up to 10+ moves in complex variations
 
+## Current Status
+
+### Fully Functional
+- Standard user registration and login (email/password)
+- Complete exercise management (CRUD operations)
+- Public and private exercise sharing
+- Cross-device exercise synchronization
+- Full training mode with all features
+- Exercise creation mode
+- Vision Mode and Hint Mode
+- Opening tree system with database
+- Offline mode with localStorage
+- Responsive design for all devices
+
+### Not Yet Implemented
+- Google OAuth integration (requires Google Client ID configuration)
+- Apple Sign-In integration (requires Apple Client ID configuration)
+- SMS login (requires SMS service integration)
+- Automatic position evaluation (Stockfish integration)
+- Online multiplayer mode
+
+### In Development
+- Performance optimizations
+- Unit and integration tests
+- Expanded opening database
+- Detailed user statistics and analytics
+
 ## Development
 
 ### Adding New Openings
@@ -147,8 +248,25 @@ The application includes a comprehensive database of chess openings:
 
 This project is licensed under the MIT License.
 
+## Infrastructure
+
+### Production Hosting
+- **Frontend**: Deployed at [flashess.eu](https://flashess.eu)
+- **Backend**: Hosted on Microsoft Azure
+- **Database**: SQLite (production-ready, scalable to PostgreSQL)
+- **CDN**: Optimized asset delivery
+
+### Development Tools
+- **Version Control**: Git with feature branches
+- **CI/CD**: Automated deployment pipelines
+- **Monitoring**: Application performance tracking
+- **Security**: JWT authentication, HTTPS encryption
+
 ## Acknowledgments
 
-- chess.js for chess logic
-- react-chessboard for board visualization
-- Tailwind CSS for styling framework 
+- **Chess Logic**: chess.js for game rules and PGN parsing
+- **Board Visualization**: react-chessboard for interactive chess board
+- **Styling**: Tailwind CSS for responsive design system
+- **Animations**: Framer Motion for smooth UI transitions
+- **Backend Framework**: ASP.NET Core for robust API development
+- **Hosting**: Microsoft Azure for reliable cloud infrastructure 
