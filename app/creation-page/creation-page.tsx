@@ -1308,13 +1308,9 @@ const CreationPage: NextPage = () => {
                       allGames.forEach(game => {
                         let moves: string[] = [];
                         
-                        // Sprawdź czy to ćwiczenie z analysis czy z pgn
+                        // Wszystkie ćwiczenia mają analysis array
                         if (game.analysis && game.analysis.length > 0) {
-                          // Ćwiczenie z analysis
                           moves = game.analysis.map((a: any) => a.move);
-                        } else if (game.pgn) {
-                          // Ćwiczenie z pgn (custom exercises)
-                          moves = game.pgn.split(' ').filter((m: string) => m !== '1.' && m !== '2.' && m !== '3.' && m !== '4.' && m !== '5.' && m !== '6.' && m !== '7.' && m !== '8.' && m !== '9.' && m !== '10.' && m !== '');
                         }
                         
                         const firstMove = moves[0];
@@ -1344,13 +1340,9 @@ const CreationPage: NextPage = () => {
                       const matchingGames = allGames.filter(game => {
                         let gameMoves: string[] = [];
                         
-                        // Sprawdź czy to ćwiczenie z analysis czy z pgn
+                        // Wszystkie ćwiczenia mają analysis array
                         if (game.analysis && game.analysis.length > 0) {
-                          // Ćwiczenie z analysis
                           gameMoves = game.analysis.map((a: any) => a.move);
-                        } else if (game.pgn) {
-                          // Ćwiczenie z pgn (custom exercises)
-                          gameMoves = game.pgn.split(' ').filter((m: string) => m !== '1.' && m !== '2.' && m !== '3.' && m !== '4.' && m !== '5.' && m !== '6.' && m !== '7.' && m !== '8.' && m !== '9.' && m !== '10.' && m !== '');
                         }
                         
                         if (gameMoves.length === 0) return false;
@@ -1367,13 +1359,9 @@ const CreationPage: NextPage = () => {
                       matchingGames.forEach(game => {
                         let gameMoves: string[] = [];
                         
-                        // Sprawdź czy to ćwiczenie z analysis czy z pgn
+                        // Wszystkie ćwiczenia mają analysis array
                         if (game.analysis && game.analysis.length > 0) {
-                          // Ćwiczenie z analysis
                           gameMoves = game.analysis.map((a: any) => a.move);
-                        } else if (game.pgn) {
-                          // Ćwiczenie z pgn (custom exercises)
-                          gameMoves = game.pgn.split(' ').filter((m: string) => m !== '1.' && m !== '2.' && m !== '3.' && m !== '4.' && m !== '5.' && m !== '6.' && m !== '7.' && m !== '8.' && m !== '9.' && m !== '10.' && m !== '');
                         }
                         
                         const nextMove = gameMoves[moveHistory.length];
