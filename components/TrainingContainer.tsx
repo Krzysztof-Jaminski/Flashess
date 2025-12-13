@@ -469,6 +469,10 @@ const TrainingContainer: React.FC = () => {
     setReviewingMistakes(true);
     setCurrentMistakeIndex(0);
     setFixedMistakes([]);
+    // Wyłącz historię gdy włączamy mistakes review
+    setShowHistory(false);
+    setHistoryIndex(null);
+    setPreHistoryTrainingIndex(null);
     const firstMistake = mistakes[0];
     const chess = new Chess(currentExercise.initialFen);
     for (let i = 0; i < firstMistake; i++) {
@@ -621,6 +625,15 @@ const TrainingContainer: React.FC = () => {
     fetchExercises();
   }, []);
 
+  // Automatycznie wyłącz historię gdy włączamy mistakes review
+  useEffect(() => {
+    if (reviewingMistakes && showHistory) {
+      setShowHistory(false);
+      setHistoryIndex(null);
+      setPreHistoryTrainingIndex(null);
+    }
+  }, [reviewingMistakes, showHistory]);
+
   return (
     <div className="w-full relative bg-[#010706] overflow-hidden flex flex-col !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border leading-[normal] tracking-[normal] min-h-screen">
       {/* Elipsy w tle w kolorze cyan */}
@@ -639,23 +652,25 @@ const TrainingContainer: React.FC = () => {
             <TopBar />
           </div>
           <div className="w-full px-1">
-            <div className="flex flex-row items-center gap-4 max-w-[1400px] mx-auto">
+            <div className="flex flex-row justify-center items-start gap-4 max-w-[1400px] mx-auto">
                              <ExerciseList
                  exercises={exercises}
                  currentExercise={currentExercise}
                  onSelect={loadExercise}
                  exerciseResults={exerciseResults}
                />
-              <TrainingBoard
-                fen={fen}
-                boardHighlight={boardHighlight}
-                onPieceDrop={onPieceDrop}
-                hintSquares={mergedOverlays}
-                boardOrientation={boardOrientation}
-                mistakes={mistakes}
-                currentMoveIndex={currentMoveIndex}
-                currentExercise={currentExercise}
-              />
+              <div className="flex flex-col items-center justify-center">
+                <TrainingBoard
+                  fen={fen}
+                  boardHighlight={boardHighlight}
+                  onPieceDrop={onPieceDrop}
+                  hintSquares={mergedOverlays}
+                  boardOrientation={boardOrientation}
+                  mistakes={mistakes}
+                  currentMoveIndex={currentMoveIndex}
+                  currentExercise={currentExercise}
+                />
+              </div>
               <RightPanel
                 userMaxMoves={userMaxMoves}
                 setUserMaxMoves={setUserMaxMoves}

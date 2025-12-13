@@ -141,27 +141,29 @@ const RightPanel: React.FC<RightPanelProps> = ({
               <div className="text-white/90 text-xs text-center font-bold">Reviewing Mistakes Mode</div>
             </div>
           )}
-          <div className="grid grid-cols-5 gap-2">
-            {mistakes.map((idx) => {
-              const isFixed = fixedMistakes.includes(idx);
-              return (
-                <div 
-                  key={idx} 
-                  className="w-10 h-10 rounded flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
-                  style={{ 
-                    background: isFixed ? 'rgba(0,255,0,0.2)' : 'rgba(255,0,0,0.2)', 
-                    border: `2px solid ${isFixed ? '#00ff00' : '#ff0000'}`,
-                    color: isFixed ? '#00ff00' : '#ff0000'
-                  }}
-                  title={`Move ${idx + 1}: ${currentExercise?.analysis[idx].move}`}
-                  tabIndex={0}
-                  role="button"
-                >
-                  {idx + 1}
-                </div>
-              );
-            })}
-          </div>
+          {reviewingMistakes && (
+            <div className="grid grid-cols-5 gap-2">
+              {mistakes.map((idx) => {
+                const isFixed = fixedMistakes.includes(idx);
+                return (
+                  <div 
+                    key={idx} 
+                    className="w-10 h-10 rounded flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+                    style={{ 
+                      background: isFixed ? 'rgba(0,255,0,0.2)' : 'rgba(255,0,0,0.2)', 
+                      border: `2px solid ${isFixed ? '#00ff00' : '#ff0000'}`,
+                      color: isFixed ? '#00ff00' : '#ff0000'
+                    }}
+                    title={`Move ${idx + 1}: ${currentExercise?.analysis[idx].move}`}
+                    tabIndex={0}
+                    role="button"
+                  >
+                    {idx + 1}
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {!reviewingMistakes && (
             <div className="mt-4 text-center">
               <Buttons

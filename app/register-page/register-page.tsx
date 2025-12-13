@@ -15,6 +15,7 @@ const RegisterPage: NextPage = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   const onLogInButtonContainerClick = useCallback(() => {
@@ -51,10 +52,14 @@ const RegisterPage: NextPage = () => {
 
     setLoading(true);
     setError("");
+    setSuccess("");
 
     const response = await authApi.register(username, email, password);
     if (response.success) {
-      router.push("/");
+      setSuccess("Account created successfully! Redirecting...");
+      setTimeout(() => {
+        router.push("/");
+      }, 1000);
     } else {
       setError(response.error);
     }
@@ -125,11 +130,32 @@ const RegisterPage: NextPage = () => {
               
               <div className="space-y-4">
                 {error && (
-                  <div className="w-full p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 text-sm">
-                    {error}
+                  <div className="w-full flex justify-center">
+                    <div className="w-full max-w-[480px] px-4 py-2 rounded-lg text-sm font-['Russo_One'] transition-all duration-200" style={{ 
+                      background: 'rgba(255, 100, 100, 0.1)', 
+                      border: '1px solid rgba(255, 100, 100, 0.3)',
+                      color: 'rgba(255, 180, 180, 0.9)',
+                      backdropFilter: 'blur(10px)',
+                      boxShadow: '0 2px 8px rgba(255, 100, 100, 0.15)'
+                    }}>
+                      {error}
+                    </div>
                   </div>
                 )}
-                <div className="w-full">
+                {success && (
+                  <div className="w-full flex justify-center">
+                    <div className="w-full max-w-[480px] px-4 py-2 rounded-lg text-sm font-['Russo_One'] transition-all duration-200" style={{ 
+                      background: 'rgba(100, 255, 100, 0.1)', 
+                      border: '1px solid rgba(100, 255, 100, 0.3)',
+                      color: 'rgba(180, 255, 180, 0.9)',
+                      backdropFilter: 'blur(10px)',
+                      boxShadow: '0 2px 8px rgba(100, 255, 100, 0.15)'
+                    }}>
+                      {success}
+                    </div>
+                  </div>
+                )}
+                <div className="w-full flex justify-center">
                   <input
                     type="text"
                     placeholder="Username"
@@ -138,10 +164,10 @@ const RegisterPage: NextPage = () => {
                     onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
                     autoComplete="username"
                     suppressHydrationWarning
-                    className="w-full px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
+                    className="w-full max-w-[480px] px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
                   />
                 </div>
-                <div className="w-full">
+                <div className="w-full flex justify-center">
                   <input
                     type="email"
                     placeholder="Email"
@@ -150,10 +176,10 @@ const RegisterPage: NextPage = () => {
                     onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
                     autoComplete="email"
                     suppressHydrationWarning
-                    className="w-full px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
+                    className="w-full max-w-[480px] px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
                   />
                 </div>
-                <div className="w-full">
+                <div className="w-full flex justify-center">
                   <input
                     type="password"
                     placeholder="Password"
@@ -162,10 +188,10 @@ const RegisterPage: NextPage = () => {
                     onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
                     autoComplete="new-password"
                     suppressHydrationWarning
-                    className="w-full px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
+                    className="w-full max-w-[480px] px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
                   />
                 </div>
-                <div className="w-full">
+                <div className="w-full flex justify-center">
                   <input
                     type="password"
                     placeholder="Confirm Password"
@@ -174,7 +200,7 @@ const RegisterPage: NextPage = () => {
                     onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
                     autoComplete="new-password"
                     suppressHydrationWarning
-                    className="w-full px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
+                    className="w-full max-w-[480px] px-4 py-2 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.3)] rounded-lg text-white placeholder-white/70 focus:border-[rgba(36,245,228,0.84)] focus:outline-none"
                   />
                 </div>
               </div>

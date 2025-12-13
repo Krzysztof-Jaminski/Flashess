@@ -57,6 +57,9 @@ const TrainingPage: NextPage = () => {
   const [startBoardMoveNumber, setStartBoardMoveNumber] = useState(1);
   const [isRandomMode, setIsRandomMode] = useState(false);
   const [visionMode, setVisionMode] = useState(false);
+  const [fixedMistakes, setFixedMistakes] = useState<number[]>([]);
+  const [reviewingMistakes, setReviewingMistakes] = useState(false);
+  const [exerciseResults, setExerciseResults] = useState<{[key: string]: {completed: number, attempted: number}}>({});
   const boardRef = useRef<any>(null);
 
   // Helper to check if a string is a valid Square
@@ -336,6 +339,8 @@ const TrainingPage: NextPage = () => {
     setCurrentMoveIndex(0);
     setShowMistakes(false);
     setMistakes([]);
+    setFixedMistakes([]);
+    setReviewingMistakes(false);
     setStartBoardMoveNumber(1);
     setIsCorrect(null);
     setShowSolution(false);
@@ -473,6 +478,79 @@ const TrainingPage: NextPage = () => {
     setIsCorrect(false);
   };
 
+  const onStartMistakeReview = () => {
+    if (mistakes.length === 0) return;
+    setReviewingMistakes(true);
+    setFixedMistakes([]);
+    // Reset to first mistake
+    if (currentExercise && mistakes.length > 0) {
+      goToHistoryIndex(mistakes[0]);
+    }
+  };
+
+  const onMoveInput = (move: string): boolean => {
+    if (!currentExercise || reviewingMistakes) return false;
+    
+    const chess = new Chess(game.fen());
+    try {
+      const moveResult = chess.move(move);
+      if (!moveResult) return false;
+      
+      const expectedMove = currentExercise.analysis[currentMoveIndex]?.move;
+      if (moveResult.san === expectedMove) {
+        setGame(chess);
+        setCurrentMoveIndex((prev) => prev + 1);
+        setIsCorrect(true);
+        setBoardHighlight(null);
+        
+        let nextMoveNumber = startBoardMoveNumber;
+        if ((currentMoveIndex + 1) % 2 === 0) nextMoveNumber++;
+        setStartBoardMoveNumber(nextMoveNumber);
+        if (checkMovesLimit(nextMoveNumber)) return true;
+        
+        // Handle computer move
+        setPendingComputerMove("pending");
+        setTimeout(() => {
+          const nextIdx = currentMoveIndex + 1;
+          if (nextIdx < currentExercise.analysis.length) {
+            const nextMove = currentExercise.analysis[nextIdx].move;
+            if (["0-1", "1-0", "*", "½-½"].includes(nextMove)) {
+              setShowMistakes(true);
+              setPendingComputerMove(null);
+              if (isRandomMode) {
+                setTimeout(() => {
+                  loadRandomExercise();
+                }, 1200);
+              }
+              return;
+            }
+            const newGame = new Chess(chess.fen());
+            newGame.move(nextMove);
+            setGame(newGame);
+            setCurrentMoveIndex(nextIdx + 1);
+            if ((nextIdx + 1) % 2 === 0) nextMoveNumber++;
+            setStartBoardMoveNumber(nextMoveNumber);
+            if (checkMovesLimit(nextMoveNumber)) return;
+          } else {
+            setShowMistakes(true);
+          }
+          setPendingComputerMove(null);
+        }, 500);
+        return true;
+      } else {
+        setIsCorrect(false);
+        setBoardHighlight("red");
+        if (!mistakes.includes(currentMoveIndex)) {
+          setMistakes((prev) => [...prev, currentMoveIndex]);
+        }
+        setTimeout(() => setBoardHighlight(null), 800);
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  };
+
   // --- VISION MODE LOGIC ---
   function getAttackedSquares(chess: Chess, color: 'w' | 'b') {
     const attacked: Record<string, number> = {};
@@ -547,6 +625,8 @@ const TrainingPage: NextPage = () => {
   useEffect(() => {
     setShowMistakes(false);
     setMistakes([]);
+    setFixedMistakes([]);
+    setReviewingMistakes(false);
   }, [currentExercise]);
 
   return (
@@ -557,7 +637,7 @@ const TrainingPage: NextPage = () => {
             <TopBar />
           </div>
           <div className="w-full px-1" style={{ marginTop: '0.5rem' }}>
-            <div className="flex flex-row gap-4 max-w-[1400px] mx-auto items-start">
+            <div className="flex flex-row justify-center gap-4 max-w-[1400px] mx-auto items-start">
               {/* Lewa kolumna - Lista ćwiczeń */}
               <ExerciseList
                 exercises={exercises}
@@ -566,7 +646,7 @@ const TrainingPage: NextPage = () => {
               />
 
               {/* Środkowa kolumna - Szachownica */}
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center justify-center">
                 <TrainingBoard
                   fen={game.fen()}
                   boardHighlight={boardHighlight}
@@ -584,15 +664,19 @@ const TrainingPage: NextPage = () => {
                 userMaxMoves={userMaxMoves}
                 setUserMaxMoves={setUserMaxMoves}
                 autoStartingMoves={autoStartingMoves}
-                setAutoStartingMoves={setAutoStartingMoves}
+                setAutoStartingMoves={fn => setAutoStartingMoves(fn)}
                 autoMovesLimit={autoMovesLimit}
                 setAutoMovesLimit={setAutoMovesLimit}
                 hintMode={hintMode}
-                setHintMode={setHintMode}
+                setHintMode={fn => setHintMode(fn)}
                 visionMode={visionMode}
                 setVisionMode={fn => setVisionMode(fn)}
                 showMistakes={showMistakes}
                 mistakes={mistakes}
+                fixedMistakes={fixedMistakes}
+                reviewingMistakes={reviewingMistakes}
+                exerciseResults={exerciseResults}
+                onStartMistakeReview={onStartMistakeReview}
                 currentExercise={currentExercise}
                 setCurrentMoveIndex={setCurrentMoveIndex}
                 setShowMistakes={setShowMistakes}
@@ -601,6 +685,8 @@ const TrainingPage: NextPage = () => {
                 setShowHistory={setShowHistory}
                 historyIndex={historyIndex}
                 currentMoveIndex={currentMoveIndex}
+                fen={game.fen()}
+                onMoveInput={onMoveInput}
                 onGoToMove={(idx) => {
                   if (!currentExercise) return;
                   const moveIdx = Math.min((idx + 1) * 2, currentExercise.analysis.length);

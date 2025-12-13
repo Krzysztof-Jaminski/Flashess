@@ -82,3 +82,4 @@ const MoveInput: React.FC<MoveInputProps> = ({ fen, onMove, disabled = false }) 
 
 export default MoveInput;
 
+

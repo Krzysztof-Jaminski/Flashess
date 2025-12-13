@@ -58,11 +58,136 @@ const CreationPage: NextPage = () => {
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const boardRef = useRef<any>(null);
   const [visionMode, setVisionMode] = useState(false);
+  const [markedSquares, setMarkedSquares] = useState<Set<Square>>(new Set());
+  const boardContainerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const rightClickStartRef = useRef<{ x: number; y: number } | null>(null);
 
 
 
   // Vision overlays
-  const visionSquares = useMemo(() => visionMode ? getVisionOverlays(game, 'both') : {}, [visionMode, game]);
+  const visionSquaresBase = useMemo(() => visionMode ? getVisionOverlays(game, 'both') : {}, [visionMode, game]);
+  
+  // Merge marked squares with vision squares
+  const visionSquares = useMemo(() => {
+    const merged: { [square: string]: React.CSSProperties } = { ...visionSquaresBase };
+    markedSquares.forEach(square => {
+      merged[square] = {
+        ...merged[square],
+        background: 'rgba(36,245,228,0.5)', // App's cyan color
+      };
+    });
+    return merged;
+  }, [visionSquaresBase, markedSquares]);
+
+  // Clear marked squares on left click
+  const clearMarkedSquares = useCallback(() => {
+    setMarkedSquares(new Set());
+  }, []);
+
+  // Handle right-click to mark/unmark squares (only on single click, not drag)
+  const handleSquareRightClick = useCallback((square: Square) => {
+    // Only mark if it was a single click (not a drag)
+    if (!isDraggingRef.current) {
+      setMarkedSquares(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(square)) {
+          newSet.delete(square);
+        } else {
+          newSet.add(square);
+        }
+        return newSet;
+      });
+    }
+  }, []);
+
+  // Helper function to get square from coordinates
+  const getSquareFromCoordinates = useCallback((x: number, y: number, boardSize: number, orientation: 'white' | 'black'): Square | null => {
+    const squareSize = boardSize / 8;
+    let file = Math.floor(x / squareSize);
+    let rank = Math.floor(y / squareSize);
+    
+    if (orientation === 'black') {
+      file = 7 - file;
+      rank = 7 - rank;
+    } else {
+      rank = 7 - rank;
+    }
+    
+    if (file >= 0 && file < 8 && rank >= 0 && rank < 8) {
+      const square = String.fromCharCode(97 + file) + (rank + 1) as Square;
+      return square;
+    }
+    return null;
+  }, []);
+
+  // Add event listeners for mouse interactions
+  useEffect(() => {
+    const boardElement = boardContainerRef.current;
+    if (!boardElement) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button === 0) {
+        // Left click - clear marked squares
+        clearMarkedSquares();
+        isDraggingRef.current = false;
+      } else if (e.button === 2) {
+        // Right click - track start position
+        rightClickStartRef.current = { x: e.clientX, y: e.clientY };
+        isDraggingRef.current = false;
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // If mouse moves while button is pressed, it's a drag
+      if (e.buttons !== 0) {
+        if (rightClickStartRef.current) {
+          const dx = Math.abs(e.clientX - rightClickStartRef.current.x);
+          const dy = Math.abs(e.clientY - rightClickStartRef.current.y);
+          // If moved more than 5 pixels, consider it a drag
+          if (dx > 5 || dy > 5) {
+            isDraggingRef.current = true;
+          }
+        } else {
+          isDraggingRef.current = true;
+        }
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (e.button === 2 && !isDraggingRef.current) {
+        // Right click without drag - mark/unmark square
+        const rect = boardElement.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const boardSize = 700;
+        
+        const square = getSquareFromCoordinates(x, y, boardSize, customColor);
+        if (square) {
+          handleSquareRightClick(square);
+        }
+      }
+      rightClickStartRef.current = null;
+      isDraggingRef.current = false;
+    };
+
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      // Don't mark here - let mouseup handle it if it wasn't a drag
+    };
+
+    boardElement.addEventListener('mousedown', handleMouseDown);
+    boardElement.addEventListener('mousemove', handleMouseMove);
+    boardElement.addEventListener('mouseup', handleMouseUp);
+    boardElement.addEventListener('contextmenu', handleContextMenu);
+
+    return () => {
+      boardElement.removeEventListener('mousedown', handleMouseDown);
+      boardElement.removeEventListener('mousemove', handleMouseMove);
+      boardElement.removeEventListener('mouseup', handleMouseUp);
+      boardElement.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, [handleSquareRightClick, clearMarkedSquares, getSquareFromCoordinates, customColor]);
 
   // Apply settings automatically when they change
   useEffect(() => {
@@ -251,6 +376,14 @@ const CreationPage: NextPage = () => {
     return true;
   };
 
+  // Function to generate a nice exercise name
+  const generateExerciseName = (pgn: string, color: 'white' | 'black'): string => {
+    const moves = pgn.split(' ').filter(m => m && !m.match(/^\d+\.$/));
+    const firstMoves = moves.slice(0, 6).join(' '); // Pierwsze 6 ruchów (3 pary)
+    const colorName = color === 'white' ? 'White' : 'Black';
+    return `${colorName}: ${firstMoves}`;
+  };
+
   const handleAddCustomExercise = async () => {
     setCustomError("");
     
@@ -270,11 +403,14 @@ const CreationPage: NextPage = () => {
       return;
     }
     
+    // Generuj ładną nazwę jeśli nie podano
+    const finalName = exerciseName.trim() || generateExerciseName(pgn, customColor);
+    
     // Zawsze zapisz lokalnie
     const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
     const newExercise = {
       id: 'custom-' + Date.now(),
-      name: exerciseName.trim() || "Exercise " + Date.now(),
+      name: finalName,
       initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       pgn,
       color: customColor,
@@ -287,7 +423,7 @@ const CreationPage: NextPage = () => {
     // Jeśli użytkownik jest zalogowany, zapisz również do backendu (cicho, bez błędów)
     if (authApi.isAuthenticated()) {
       await exercisesApi.create({
-        name: exerciseName.trim() || "Exercise " + Date.now(),
+        name: finalName,
         initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
         pgn,
         color: customColor,
@@ -318,14 +454,24 @@ const CreationPage: NextPage = () => {
       return;
     }
 
-    // Generuj PGN bez nagłówków - tylko ruchy
-    const cleanPgn = moveHistory.join(" ");
+    // Generuj PGN w formacie "1. e4 e5 2. Nf3 Nc6"
+    let formattedPgn = '';
+    for (let i = 0; i < moveHistory.length; i += 2) {
+      const moveNum = Math.floor(i / 2) + 1;
+      const white = moveHistory[i] || '';
+      const black = moveHistory[i + 1] || '';
+      formattedPgn += `${moveNum}. ${white} ${black ? black + ' ' : ''}`;
+    }
+    const cleanPgn = formattedPgn.trim();
+
+    // Generuj ładną nazwę jeśli nie podano
+    const finalName = exerciseName.trim() || generateExerciseName(cleanPgn, customColor);
 
     // Zawsze zapisz lokalnie
     const customExercises = JSON.parse(localStorage.getItem('customExercises') || '[]');
     const newExercise = {
       id: 'custom-' + Date.now(),
-      name: exerciseName.trim() || "Exercise " + Date.now(),
+      name: finalName,
       initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       pgn: cleanPgn,
       color: customColor,
@@ -338,7 +484,7 @@ const CreationPage: NextPage = () => {
     // Jeśli użytkownik jest zalogowany, zapisz również do backendu (cicho, bez błędów)
     if (authApi.isAuthenticated()) {
       await exercisesApi.create({
-        name: exerciseName.trim() || "Exercise " + Date.now(),
+        name: finalName,
         initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
         pgn: cleanPgn,
         color: customColor,
@@ -381,27 +527,30 @@ const CreationPage: NextPage = () => {
   const loadExerciseToBoard = (exercise: any) => {
     try {
       const chess = new Chess();
+      let formattedPgn = "";
       if (exercise.pgn) {
-        // If PGN doesn't start with "1.", add it for proper parsing
+        // If PGN doesn't start with "1.", format it properly
         let pgnToLoad = exercise.pgn;
         if (!pgnToLoad.startsWith('1.')) {
           // Try to format as proper PGN
           const moves = pgnToLoad.split(' ').filter((m: string) => m);
-          let formattedPgn = '';
           for (let i = 0; i < moves.length; i += 2) {
             const moveNum = Math.floor(i / 2) + 1;
             const white = moves[i] || '';
             const black = moves[i + 1] || '';
-            formattedPgn += `${moveNum}. ${white} ${black} `.trim() + ' ';
+            formattedPgn += `${moveNum}. ${white} ${black ? black + ' ' : ''}`;
           }
-          pgnToLoad = formattedPgn.trim();
+          formattedPgn = formattedPgn.trim();
+        } else {
+          formattedPgn = pgnToLoad;
         }
-        chess.loadPgn(pgnToLoad);
+        chess.loadPgn(formattedPgn);
       }
       setGame(chess);
       setMoveHistory(chess.history());
       setHistoryIndex(chess.history().length);
-      setCustomPGN(exercise.pgn || "");
+      // Użyj sformatowanego PGN zamiast oryginalnego
+      setCustomPGN(formattedPgn || "");
       setCustomColor(exercise.color || 'white');
       setIsPublic(exercise.isPublic || false);
       
@@ -522,6 +671,9 @@ const CreationPage: NextPage = () => {
 
   // Render move history
   const renderMoveHistory = () => {
+    // Maksymalna liczba par ruchów do wyświetlenia (np. 12 par = 24 ruchy)
+    const MAX_VISIBLE_MOVE_PAIRS = 12;
+    
     return (
       <div>
         <div className="flex gap-2 mb-2">
@@ -556,7 +708,7 @@ const CreationPage: NextPage = () => {
         </div>
         {/* Historia ruchów z obsługą wariantów */}
         {moveHistory.length === 0 ? (
-          <div className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-2 text-xs text-white/60">
+          <div className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-2 text-xs text-white/60" style={{ minHeight: '60px' }}>
             No moves played yet
           </div>
         ) : (
@@ -569,6 +721,16 @@ const CreationPage: NextPage = () => {
               out.push(`${num}. ${white} ${black}`.trim());
             }
             
+            // Jeśli historia jest długa, pokaż tylko ostatnie N par ruchów
+            const totalPairs = out.length;
+            const isHistoryLong = totalPairs > MAX_VISIBLE_MOVE_PAIRS;
+            const visiblePairs = isHistoryLong 
+              ? out.slice(-MAX_VISIBLE_MOVE_PAIRS)
+              : out;
+            const startPairNumber = isHistoryLong 
+              ? totalPairs - MAX_VISIBLE_MOVE_PAIRS + 1
+              : 1;
+            
             // Dodaj informację o wariantach jeśli historyIndex > moveHistory.length
             let variantInfo = "";
             if (historyIndex !== null && historyIndex > moveHistory.length) {
@@ -577,16 +739,27 @@ const CreationPage: NextPage = () => {
             
             return (
               <div 
-                className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-2 text-xs text-white/80 max-h-64 overflow-y-scroll move-history-scroll"
-                onWheel={(e) => {
-                  e.currentTarget.scrollTop += e.deltaY;
-                }}
+                className="bg-[rgba(36,245,228,0.08)] border border-[rgba(36,245,228,0.18)] rounded p-2 mt-2 text-xs text-white/80"
+                style={{ minHeight: '60px', maxHeight: '200px', overflow: 'hidden' }}
               >
                 <div className="font-bold mb-1">Move History</div>
+                {isHistoryLong && (
+                  <div className="text-white/50 text-xs mb-1">
+                    Showing last {MAX_VISIBLE_MOVE_PAIRS} moves (total: {totalPairs})
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-x-3 gap-y-1">
-                  {out.map((line, idx) => (
-                    <span key={idx} className={historyIndex !== null && Math.floor(historyIndex/2) === idx ? "text-cyan-400 font-bold" : ""}>{line}</span>
-                  ))}
+                  {visiblePairs.map((line, idx) => {
+                    const actualIdx = isHistoryLong ? startPairNumber - 1 + idx : idx;
+                    return (
+                      <span 
+                        key={actualIdx} 
+                        className={historyIndex !== null && Math.floor(historyIndex/2) === actualIdx ? "text-cyan-400 font-bold" : ""}
+                      >
+                        {line}
+                      </span>
+                    );
+                  })}
                   {variantInfo && (
                     <span className="text-yellow-400 italic">{variantInfo}</span>
                   )}
@@ -621,9 +794,9 @@ const CreationPage: NextPage = () => {
             <TopBar />
           </div>
           <div className="w-full px-1" style={{ marginTop: '0.5rem' }}>
-            <div className="flex flex-row items-center gap-4 max-w-[1400px] mx-auto">
+            <div className="flex flex-row justify-center items-start gap-4 max-w-[1400px] mx-auto">
               {/* Left: Add custom exercise */}
-              <div className="w-[300px] glass-panel rounded-lg p-4" style={{ marginTop: '0', minHeight: 705, alignSelf: 'flex-start' }}>
+              <div className="w-[300px] flex-shrink-0 glass-panel rounded-lg p-3 pt-2 flex flex-col" style={{ marginTop: '0', minHeight: 705, alignSelf: 'flex-start' }}>
                 <h3 className="text-lg text-cyan-300 mb-3 text-center">Add your own exercise</h3>
                 {/* Vision Mode Toggle Button */}
                 <div className="mb-3">
@@ -643,13 +816,15 @@ const CreationPage: NextPage = () => {
                     value={exerciseName}
                     onChange={e => setExerciseName(e.target.value)}
                     placeholder="Enter exercise name"
-                    className="h-[2.125rem] rounded-lg bg-[rgba(255,255,255,0.05)] border-solid border-[1.5px] box-border w-full pr-4 pl-4 text-[0.938rem] text-white font-['Russo_One'] transition-all duration-150 focus:border-[rgba(36,245,228,0.84)] focus:shadow-[0_0_0_2px_rgba(36,245,228,0.18)] focus:outline-none"
+                    className="h-[2.125rem] rounded-lg bg-[rgba(255,255,255,0.05)] border-solid border-[1.5px] box-border w-full pr-4 pl-4 text-[0.938rem] text-white font-['Russo_One'] transition-all duration-150 focus:border-[rgba(36,245,228,0.84)] focus:shadow-[0_0_0_2px_rgba(36,245,228,0.18)] focus:outline-none overflow-x-auto"
                     style={{ 
                       borderColor: 'rgba(255,255,255,0.4)', 
                       outline: 'none',
                       outlineOffset: 0, 
                       background: '#181c1f', 
-                      color: '#fff' 
+                      color: '#fff',
+                      overflowX: 'auto',
+                      overflowY: 'hidden'
                     }}
                     onFocus={(e) => {
                       e.target.style.outline = '2px solid rgba(36,245,228,0.84)';
@@ -658,6 +833,12 @@ const CreationPage: NextPage = () => {
                     onBlur={(e) => {
                       e.target.style.outline = 'none';
                       e.target.style.outlineOffset = '0';
+                    }}
+                    onWheel={(e) => {
+                      if (e.currentTarget.scrollWidth > e.currentTarget.clientWidth) {
+                        e.currentTarget.scrollLeft += e.deltaY;
+                        e.preventDefault();
+                      }
                     }}
                     tabIndex={0}
                   />
@@ -674,21 +855,40 @@ const CreationPage: NextPage = () => {
                     onChange={e => setCustomPGN(e.target.value)}
                     placeholder="Paste your PGN here"
                     rows={3}
-                    className="rounded-lg bg-[rgba(255,255,255,0.05)] border-solid border-[1.5px] box-border w-full pr-4 pl-4 pt-2 pb-2 text-[0.938rem] text-white font-['Russo_One'] transition-all duration-150 focus:border-[rgba(36,245,228,0.84)] focus:shadow-[0_0_0_2px_rgba(36,245,228,0.18)] focus:outline-none resize-none"
+                    className="rounded-lg bg-[rgba(255,255,255,0.05)] border-solid border-[1.5px] box-border w-full pr-4 pl-4 pt-2 pb-2 text-[0.938rem] text-white font-['Russo_One'] transition-all duration-150 focus:border-[rgba(36,245,228,0.84)] focus:shadow-[0_0_0_2px_rgba(36,245,228,0.18)] focus:outline-none resize-none overflow-hidden"
                     style={{ 
                       borderColor: 'rgba(255,255,255,0.4)', 
                       outline: 'none',
                       outlineOffset: 0, 
                       background: '#181c1f', 
-                      color: '#fff' 
+                      color: '#fff',
+                      overflow: 'hidden'
                     }}
                     onFocus={(e) => {
                       e.target.style.outline = '2px solid rgba(36,245,228,0.84)';
                       e.target.style.outlineOffset = '2px';
+                      e.target.style.overflow = 'auto';
                     }}
                     onBlur={(e) => {
                       e.target.style.outline = 'none';
                       e.target.style.outlineOffset = '0';
+                      e.target.style.overflow = 'hidden';
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.overflow = 'auto';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (document.activeElement !== e.currentTarget) {
+                        e.currentTarget.style.overflow = 'hidden';
+                      }
+                    }}
+                    onWheel={(e) => {
+                      if (e.currentTarget.scrollHeight > e.currentTarget.clientHeight || 
+                          e.currentTarget.scrollWidth > e.currentTarget.clientWidth) {
+                        e.currentTarget.scrollTop += e.deltaY;
+                        e.currentTarget.scrollLeft += e.deltaX || 0;
+                        e.preventDefault();
+                      }
                     }}
                     tabIndex={0}
                   />
@@ -707,9 +907,7 @@ const CreationPage: NextPage = () => {
                       outline: 'none'
                     }}
                     onFocus={(e) => {
-                      e.currentTarget.style.outline = '2px solid rgba(36,245,228,0.84)';
-                      e.currentTarget.style.outlineOffset = '-2px';
-                      e.currentTarget.style.borderRadius = '4px';
+                      // Nie dodawaj obramówki po kliknięciu
                     }}
                     onBlur={(e) => {
                       e.currentTarget.style.outline = 'none';
@@ -730,9 +928,7 @@ const CreationPage: NextPage = () => {
                       outline: 'none'
                     }}
                     onFocus={(e) => {
-                      e.currentTarget.style.outline = '2px solid rgba(36,245,228,0.84)';
-                      e.currentTarget.style.outlineOffset = '-2px';
-                      e.currentTarget.style.borderRadius = '4px';
+                      // Nie dodawaj obramówki po kliknięciu
                     }}
                     onBlur={(e) => {
                       e.currentTarget.style.outline = 'none';
@@ -805,37 +1001,56 @@ const CreationPage: NextPage = () => {
                 {renderMoveHistory()}
               </div>
               {/* Center: Chessboard */}
-              <div className="glass-panel-no-filter rounded-lg p-4" style={{ width: 716, minHeight: 705, marginTop: '0', alignSelf: 'flex-start' }}>
-                <div style={{ width: 700, height: 700, position: 'relative' }}>
-                  <Chessboard
-                    position={game.fen()}
-                    boardWidth={700}
-                    onPieceDrop={handlePieceDrop}
-                    boardOrientation={customColor}
-                    customSquareStyles={visionSquares}
-                    arePiecesDraggable={true}
-                    areArrowsAllowed={false}
-                    arePremovesAllowed={false}
-                    customBoardStyle={{
-                      borderRadius: "4px",
-                      boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
-                    }}
-                    customArrowColor="var(--blue-84)"
-                    customDropSquareStyle={{
-                      boxShadow: "inset 0 0 1px 4px rgba(36,245,228,0.5)"
-                    }}
-                  />
+              <div className="flex flex-col items-center justify-center flex-shrink-0">
+                <div className="glass-panel-no-filter rounded-lg p-4 flex items-center justify-center" style={{ width: 716, minHeight: 705, marginTop: '0', alignSelf: 'flex-start' }}>
+                  <div ref={boardContainerRef} style={{ width: 700, height: 700, position: 'relative' }}>
+                    <Chessboard
+                      position={game.fen()}
+                      boardWidth={700}
+                      onPieceDrop={handlePieceDrop}
+                      boardOrientation={customColor}
+                      customSquareStyles={visionSquares}
+                      arePiecesDraggable={true}
+                      areArrowsAllowed={true}
+                      arePremovesAllowed={false}
+                      customBoardStyle={{
+                        borderRadius: "4px",
+                        boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
+                      }}
+                      customArrowColor="rgba(36,245,228,0.84)"
+                      customDropSquareStyle={{
+                        boxShadow: "inset 0 0 1px 4px rgba(36,245,228,0.5)"
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
               {/* Right: Popular Moves with Opening Tree Integration */}
-              <div className="w-[300px] glass-panel rounded-lg p-4" style={{ marginTop: '0', minHeight: 705, alignSelf: 'flex-start' }}>
+              <div className="w-[300px] flex-shrink-0 glass-panel rounded-lg p-3 pt-2 flex flex-col" style={{ marginTop: '0', minHeight: 705, alignSelf: 'flex-start' }}>
                 <div className="mb-3">
-                  <div className="flex justify-center mb-2">
+                  <div className="flex items-center justify-center gap-2 mb-2">
                     <Buttons
                       bUTTON={showCustomExercises ? "Show Moves" : `Custom Exercises (${customExercises.length})`}
                       onLogInButtonContainerClick={() => setShowCustomExercises(!showCustomExercises)}
-                      className="!py-1 !px-3 !text-xs !rounded"
+                      className="!py-2 !px-4 !text-sm !rounded"
                     />
+                    {showCustomExercises && (
+                      <button
+                        onClick={() => loadCustomExercises()}
+                        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg hover:bg-white/15 transition-all duration-200 text-white text-sm"
+                        title="Refresh exercises"
+                        tabIndex={0}
+                        role="button"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            loadCustomExercises();
+                          }
+                        }}
+                      >
+                        ↻
+                      </button>
+                    )}
                   </div>
                   <h3 className="text-lg text-cyan-300 text-center">
                     {showCustomExercises ? "Your Custom Exercises" : "Lines Analyzed"}
@@ -880,23 +1095,6 @@ const CreationPage: NextPage = () => {
                 
                 {showCustomExercises ? (
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 mb-2">
-                      <button
-                        onClick={() => loadCustomExercises()}
-                        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg hover:bg-white/15 transition-all duration-200 text-white text-sm"
-                        title="Refresh exercises"
-                        tabIndex={0}
-                        role="button"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            loadCustomExercises();
-                          }
-                        }}
-                      >
-                        ↻
-                      </button>
-                    </div>
                     <div 
                       className="space-y-2 overflow-y-scroll exercise-list-scroll"
                       style={{ maxHeight: '792px' }}
@@ -909,7 +1107,7 @@ const CreationPage: NextPage = () => {
                           return (
                             <div
                               key={exercise.id}
-                              className="p-2 pr-6 rounded cursor-pointer transition-colors flex items-center justify-between font-['Russo_One']"
+                              className="p-2 rounded cursor-pointer transition-colors font-['Russo_One']"
                               style={{ background: 'rgba(255,255,255,0.1)' }}
                               onClick={() => loadExerciseToBoard(exercise)}
                               onWheel={(e) => {
@@ -927,11 +1125,11 @@ const CreationPage: NextPage = () => {
                                 }
                               }}
                             >
-                              <div className="flex-1">
-                                <div className="text-white/90 text-sm font-bold mb-1">{exercise.name}</div>
-                                <div className="flex items-center gap-2 text-xs">
+                              <div className="text-white/90 text-sm font-bold mb-1">{exercise.name}</div>
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
                                   {isBlack ? (
-                                    <span className="text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-800 border border-gray-400 flex items-center gap-1">
+                                    <span className="text-xs px-2 py-1 rounded-full bg-gray-800 text-white border border-gray-600 flex items-center gap-1">
                                       <span className="w-2 h-2 bg-white rounded-sm"></span>
                                       BLACK
                                     </span>
@@ -945,25 +1143,25 @@ const CreationPage: NextPage = () => {
                                     {new Date(exercise.createdAt || Date.now()).toLocaleDateString()}
                                   </span>
                                 </div>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteCustomExercise(exercise.id);
-                                }}
-                                className="ml-2 px-2 py-1 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-xs hover:bg-red-500/30 transition-colors"
-                                tabIndex={0}
-                                role="button"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
+                                <button
+                                  onClick={(e) => {
                                     e.stopPropagation();
                                     deleteCustomExercise(exercise.id);
-                                  }
-                                }}
-                              >
-                                ×
-                              </button>
+                                  }}
+                                  className="px-2 py-1 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-xs hover:bg-red-500/30 transition-colors"
+                                  tabIndex={0}
+                                  role="button"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      deleteCustomExercise(exercise.id);
+                                    }
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </div>
                             </div>
                           );
                         })
