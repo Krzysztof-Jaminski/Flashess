@@ -687,6 +687,7 @@ const CreationPage: NextPage = () => {
   const [publicExercises, setPublicExercises] = useState<any[]>([]);
   const [studyGames, setStudyGames] = useState<Exercise[]>([]);
   const [showCustomExercises, setShowCustomExercises] = useState(false);
+  const [privateOnly, setPrivateOnly] = useState(false);
   const [highlightButton, setHighlightButton] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isClient, setIsClient] = useState(false);
@@ -897,11 +898,11 @@ const CreationPage: NextPage = () => {
           <div className="w-full">
             <TopBar />
           </div>
-          <div className="w-full px-1" style={{ marginTop: '0.5rem' }}>
+          <div className="w-full px-1" style={{ marginTop: '0.3rem' }}>
             <div className="flex flex-row justify-center items-start gap-4 max-w-[1400px] mx-auto">
               {/* Left: Add custom exercise */}
-              <div className="glass-panel w-[300px] rounded-lg p-4 flex flex-col" style={{ height: 717, marginTop: 0, alignSelf: 'flex-start', justifyContent: 'flex-start', overflow: 'hidden' }}>
-                <h3 className="text-lg text-cyan-300 mb-3 text-center">Add your own exercise</h3>
+              <div className="glass-panel w-[300px] rounded-lg p-3 pt-0.5 flex flex-col" style={{ height: 722, marginTop: 0, alignSelf: 'flex-start', justifyContent: 'flex-start', overflow: 'hidden' }}>
+                <h3 className="text-xl text-cyan-300 mb-4 text-center">Add your own exercises</h3>
                 {/* Vision Mode Toggle Button */}
                 <div className="mb-3">
                   <Buttons
@@ -1029,7 +1030,8 @@ const CreationPage: NextPage = () => {
                     style={{ 
                       minWidth: '100px',
                       maxWidth: '120px',
-                      outline: 'none'
+                      outline: 'none',
+                      marginLeft: '-1.5rem'
                     }}
                     onFocus={(e) => {
                       // Nie dodawaj obramówki po kliknięciu
@@ -1106,7 +1108,7 @@ const CreationPage: NextPage = () => {
               </div>
               {/* Center: Chessboard */}
               <div className="flex flex-col items-center justify-center">
-                <div className="glass-panel-no-filter rounded-lg p-4 flex items-center justify-center" style={{ width: 716, height: 717, marginTop: 0, alignSelf: 'flex-start' }}>
+                <div className="glass-panel-no-filter rounded-lg p-4 flex items-center justify-center" style={{ width: 716, minHeight: 705, marginTop: 0, alignSelf: 'flex-start' }}>
                   <div ref={boardContainerRef} style={{ width: 700, height: 700, position: 'relative' }}>
                     <Chessboard
                       position={game.fen()}
@@ -1130,14 +1132,28 @@ const CreationPage: NextPage = () => {
                 </div>
               </div>
               {/* Right: Popular Moves with Opening Tree Integration */}
-              <div className="glass-panel w-[300px] rounded-lg p-4 flex flex-col" style={{ height: 717, marginTop: 0, alignSelf: 'flex-start', overflow: 'hidden' }}>
+              <div className="glass-panel w-[300px] rounded-lg p-3 pt-0.5 flex flex-col" style={{ height: 722, marginTop: 0, alignSelf: 'flex-start', overflow: 'hidden' }}>
                 <div className="mb-3 flex-shrink-0">
+                  <h3 className="text-xl text-cyan-300 text-center mb-4">
+                    {showCustomExercises ? "Your Custom Exercises" : "Lines Analyzed"}
+                  </h3>
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <Buttons
-                      bUTTON={showCustomExercises ? "Show Moves" : `Custom Exercises (${customExercises.length})`}
+                      bUTTON={showCustomExercises ? "Show Moves" : `Exercises (${customExercises.length})`}
                       onLogInButtonContainerClick={() => setShowCustomExercises(!showCustomExercises)}
-                      className="!py-2 !px-4 !text-sm !rounded"
+                      className="!py-1 !px-4 !rounded-xl font-['Russo_One'] min-w-[90px] h-10 flex items-center justify-center border shadow-md text-base text-white transition-all duration-150 focus:outline-none bg-[rgba(255,255,255,0.08)] border-[var(--blue-84)] hover:bg-[rgba(36,245,228,0.10)]"
                     />
+                    {!showCustomExercises && (
+                      <Buttons
+                        bUTTON={`Private Only: ${privateOnly ? 'ON' : 'OFF'}`}
+                        onLogInButtonContainerClick={() => setPrivateOnly(!privateOnly)}
+                        className={`!py-1 !px-4 !rounded-xl font-['Russo_One'] min-w-[90px] h-10 flex items-center justify-center border shadow-md text-base text-white transition-all duration-150 focus:outline-none ${
+                          privateOnly 
+                            ? 'bg-[rgba(36,245,228,0.20)] border-[var(--blue-84)] hover:bg-[rgba(36,245,228,0.30)]' 
+                            : 'bg-[rgba(255,255,255,0.08)] border-[var(--blue-84)] hover:bg-[rgba(36,245,228,0.10)]'
+                        }`}
+                      />
+                    )}
                     {showCustomExercises && (
                       <button
                         onClick={() => loadCustomExercises()}
@@ -1156,9 +1172,6 @@ const CreationPage: NextPage = () => {
                       </button>
                     )}
                   </div>
-                  <h3 className="text-lg text-cyan-300 text-center">
-                    {showCustomExercises ? "Your Custom Exercises" : "Lines Analyzed"}
-                  </h3>
                 </div>
                 
                 {!showCustomExercises && (
@@ -1289,7 +1302,14 @@ const CreationPage: NextPage = () => {
                     {/* Popular Moves from Study Database + User Exercises */}
                     {isClient ? (() => {
                     // Użyj getExercises() tak jak w training page - to zapewnia deduplikację i pokazuje tylko te ćwiczenia, które są w training page
-                    const allGames = getExercises();
+                    let allGames = getExercises();
+                    
+                    // Filtruj na podstawie privateOnly - jeśli true, pokazuj tylko prywatne (custom- lub backend-)
+                    if (privateOnly) {
+                      allGames = allGames.filter(game => 
+                        game.id.startsWith('custom-') || game.id.startsWith('backend-')
+                      );
+                    }
                     
                     // refreshTrigger wymusza re-render gdy dodamy nowe ćwiczenie
                     const _ = refreshTrigger;

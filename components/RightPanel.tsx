@@ -133,7 +133,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
         onMove={onMoveInput}
         disabled={reviewingMistakes || !currentExercise}
       />
-      <h3 className="text-lg mb-3" style={{ color: 'var(--blue-84)' }}>Mistake Review</h3>
+      <h3 className="text-lg mb-3 text-center" style={{ color: 'var(--blue-84)' }}>Mistake Review</h3>
       {mistakes.length > 0 ? (
         <div className="space-y-3">
           {reviewingMistakes && (

@@ -34,6 +34,7 @@ const TrainingPage: NextPage = () => {
   const [game, setGame] = useState(new Chess());
   const [boardWidth, setBoardWidth] = useState(600);
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([]);
   const [currentExercise, setCurrentExercise] = useState<Exercise | null>(null);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [showSolution, setShowSolution] = useState(false);
@@ -100,6 +101,8 @@ const TrainingPage: NextPage = () => {
     const fetchedExercises = getExercises();
     const sortedExercises = fetchedExercises.sort((a, b) => smartSort(a.id, b.id));
     setExercises(sortedExercises);
+    // Inicjalizuj przefiltrowane ćwiczenia jako wszystkie ćwiczenia na początku
+    setFilteredExercises(sortedExercises);
   };
 
   // Funkcja do ustawiania pozycji na podstawie indeksu historii
@@ -465,11 +468,13 @@ const TrainingPage: NextPage = () => {
   };
 
   const loadRandomExercise = () => {
-    if (exercises.length > 0) {
+    // Użyj przefiltrowanych ćwiczeń zamiast wszystkich
+    const exercisesToUse = filteredExercises.length > 0 ? filteredExercises : exercises;
+    if (exercisesToUse.length > 0) {
       // Deterministic random selection based on current time (rounded to seconds)
-      const timeBasedIndex = Math.floor(Date.now() / 1000) % exercises.length;
+      const timeBasedIndex = Math.floor(Date.now() / 1000) % exercisesToUse.length;
       setIsRandomMode(true);
-      loadExercise(exercises[timeBasedIndex]);
+      loadExercise(exercisesToUse[timeBasedIndex]);
     }
   };
 
@@ -643,6 +648,8 @@ const TrainingPage: NextPage = () => {
                 exercises={exercises}
                 currentExercise={currentExercise}
                 onSelect={loadExercise}
+                exerciseResults={exerciseResults}
+                onFilteredExercisesChange={setFilteredExercises}
               />
 
               {/* Środkowa kolumna - Szachownica */}

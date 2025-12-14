@@ -154,6 +154,7 @@ const Buttons: NextPage<ButtonsType> = ({
           ? '0 0 20px rgba(36,245,228,0.3), 0 4px 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)' 
           : '0 2px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
         transform: isHovered ? 'translateY(-1px)' : 'translateY(0)',
+        outline: 'none',
       }}
       onClick={onLogInButtonContainerClick}
       data-property1={property1}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Buttons from "./buttons";
 import { Exercise } from "../utils/exercises";
 
@@ -7,12 +7,21 @@ interface ExerciseListProps {
   currentExercise: Exercise | null;
   onSelect: (exercise: Exercise) => void;
   exerciseResults?: {[key: string]: {completed: number, attempted: number}};
+  onFilteredExercisesChange?: (filteredExercises: Exercise[]) => void;
 }
 
-const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise, onSelect, exerciseResults = {} }) => {
+// Funkcja pomocnicza do sprawdzania czy ćwiczenie jest z exercises.json
+const isFromExercisesJson = (exerciseId: string): boolean => {
+  // Ćwiczenia z exercises.json mają ID jak "KIA1", "KIA2", itd.
+  // Customowe mają prefix "custom-", backendowe mają prefix "backend-"
+  return !exerciseId.startsWith("custom-") && !exerciseId.startsWith("backend-");
+};
+
+const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise, onSelect, exerciseResults = {}, onFilteredExercisesChange }) => {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("name-asc");
   const [colorFilter, setColorFilter] = useState<"all" | "white" | "black">("all");
+  const [excludeJsonExercises, setExcludeJsonExercises] = useState(false);
   const [exerciseStats, setExerciseStats] = useState<{ [id: string]: { total: number; perfect: number } }>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -35,7 +44,10 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
       filtered = filtered.filter(e => e.color === colorFilter);
     }
     
-
+    // Filtrowanie - wyklucz ćwiczenia z exercises.json jeśli opcja jest włączona
+    if (excludeJsonExercises) {
+      filtered = filtered.filter(e => !isFromExercisesJson(e.id));
+    }
     
     switch (sort) {
       case "name-asc":
@@ -61,7 +73,14 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
 
     
     return filtered;
-  }, [exercises, search, sort, colorFilter, exerciseStats]);
+  }, [exercises, search, sort, colorFilter, exerciseStats, excludeJsonExercises]);
+
+  // Przekaż przefiltrowane ćwiczenia do rodzica
+  useEffect(() => {
+    if (onFilteredExercisesChange) {
+      onFilteredExercisesChange(filteredSortedExercises);
+    }
+  }, [filteredSortedExercises, onFilteredExercisesChange]);
 
   // Ustal kolor tła kółka (czarne/białe) i kolor liczb
   const getCircleStyle = (exercise: Exercise) => {
@@ -98,25 +117,36 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
   };
 
   return (
-    <div className="glass-panel w-[300px] rounded-lg p-3 pt-2 flex flex-col font-['Russo_One']" style={{ minHeight: 705, maxHeight: 715, marginTop: 0, alignSelf: 'flex-start', justifyContent: 'flex-start' }}>
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h3 className="text-lg" style={{ color: '#fff' }}>Exercises</h3>
-          <div className="text-xs text-white/60">
-            {exercises.filter(e => e.color === 'white').length} white, {exercises.filter(e => e.color === 'black').length} black
-          </div>
+    <div className="glass-panel w-[300px] rounded-lg p-3 pt-0.5 flex flex-col font-['Russo_One']" style={{ height: 722, minWidth: 280, marginTop: 0, alignSelf: 'flex-start', justifyContent: 'flex-start', overflow: 'hidden' }}>
+      <div className="mb-3">
+        <h3 className="text-xl text-center mb-4" style={{ color: 'var(--blue-84)' }}>Exercises</h3>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <Buttons
+            bUTTON={`Private Only: ${excludeJsonExercises ? 'ON' : 'OFF'}`}
+            onLogInButtonContainerClick={() => {
+              setExcludeJsonExercises(!excludeJsonExercises);
+            }}
+            className={`!py-1 !px-6 !rounded-xl font-['Russo_One'] min-w-[110px] h-10 flex items-center justify-center border shadow-md text-base text-white transition-all duration-150 focus:outline-none ${
+              excludeJsonExercises 
+                ? 'bg-[rgba(36,245,228,0.20)] border-[var(--blue-84)] hover:bg-[rgba(36,245,228,0.30)]' 
+                : 'bg-[rgba(255,255,255,0.08)] border-[var(--blue-84)] hover:bg-[rgba(36,245,228,0.10)]'
+            }`}
+          />
+          <Buttons
+            bUTTON="Random"
+            onLogInButtonContainerClick={() => {
+              if (filteredSortedExercises.length > 0) {
+                // Deterministic random selection based on current time (rounded to seconds)
+                const timeBasedIndex = Math.floor(Date.now() / 1000) % filteredSortedExercises.length;
+                onSelect(filteredSortedExercises[timeBasedIndex]);
+              }
+            }}
+            className="!py-1 !px-6 !rounded-xl font-['Russo_One'] min-w-[110px] h-10 flex items-center justify-center bg-[rgba(255,255,255,0.08)] border border-[var(--blue-84)] shadow-md text-base text-white hover:bg-[rgba(36,245,228,0.10)] transition-all duration-150 focus:outline-none"
+          />
         </div>
-        <Buttons
-          bUTTON="Random"
-          onLogInButtonContainerClick={() => {
-            if (filteredSortedExercises.length > 0) {
-              // Deterministic random selection based on current time (rounded to seconds)
-              const timeBasedIndex = Math.floor(Date.now() / 1000) % filteredSortedExercises.length;
-              onSelect(filteredSortedExercises[timeBasedIndex]);
-            }
-          }}
-          className="!py-1 !px-6 !rounded-xl font-['Russo_One'] min-w-[110px] h-10 flex items-center justify-center bg-[rgba(255,255,255,0.08)] border border-[var(--blue-84)] shadow-md text-base text-white hover:bg-[rgba(36,245,228,0.10)] transition-all duration-150"
-        />
+        <div className="text-xs text-white/60 text-center">
+          {filteredSortedExercises.filter(e => e.color === 'white').length} white, {filteredSortedExercises.filter(e => e.color === 'black').length} black
+        </div>
       </div>
       {/* Search */}
       <div className="relative mb-3">
@@ -159,8 +189,8 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
         </select>
       </div>
       <div 
-        className="space-y-2 overflow-y-scroll exercise-list-scroll"
-        style={{ maxHeight: '792px' }}
+        className="space-y-2 overflow-y-auto exercise-list-scroll flex-1"
+        style={{ minHeight: 0 }}
       >
         <div>
           {filteredSortedExercises.map((exercise) => {
@@ -193,35 +223,39 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
                   }
                 }}
               >
-                <div>
-                  <div className="text-sm font-bold flex items-center gap-2">
+                <div className="flex-1">
+                  <div className="text-sm font-bold">
                     {exercise.name}
-                    {isBlack ? (
-                      <span 
-                        className="text-xs px-2 py-1 rounded-full bg-gray-800 text-white border border-gray-600 flex items-center gap-1"
-                        title="Black perspective - graj jako czarne"
-                      >
-                        <span className="w-2 h-2 bg-white rounded-sm"></span>
-                        BLACK
-                      </span>
-                    ) : (
-                      <span 
-                        className="text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-800 border border-gray-400 flex items-center gap-1"
-                        title="White perspective - graj jako białe"
-                      >
-                        <span className="w-2 h-2 bg-black rounded-sm"></span>
-                        WHITE
-                      </span>
-                    )}
                   </div>
                   {exercise.maxMoves && (
                     <div className="text-xs" style={{ color: 'var(--blue-84)' }}>max moves: {exercise.maxMoves}</div>
                   )}
-                  <div className="text-xs text-white/70">
-                    {Math.floor(exercise.analysis.length / 2)} moves
-                  </div>
-                  <div className="text-xs text-white/60">
-                    {new Date(exercise.createdAt).toLocaleDateString()}
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-white/70">
+                      {Math.floor(exercise.analysis.length / 2)} moves
+                    </div>
+                    <div className="text-xs text-white/60">
+                      {new Date(exercise.createdAt).toLocaleDateString()}
+                    </div>
+                    {isBlack ? (
+                      <span 
+                        className="text-[0.64rem] px-1.5 py-0.5 rounded-full bg-gray-800 text-white border border-gray-600 flex items-center gap-0.5"
+                        style={{ transform: 'scale(0.8)', transformOrigin: 'left center' }}
+                        title="Black perspective - graj jako czarne"
+                      >
+                        <span className="w-1.5 h-1.5 bg-white rounded-sm"></span>
+                        BLACK
+                      </span>
+                    ) : (
+                      <span 
+                        className="text-[0.64rem] px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-800 border border-gray-400 flex items-center gap-0.5"
+                        style={{ transform: 'scale(0.8)', transformOrigin: 'left center' }}
+                        title="White perspective - graj jako białe"
+                      >
+                        <span className="w-1.5 h-1.5 bg-black rounded-sm"></span>
+                        WHITE
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center justify-center">
