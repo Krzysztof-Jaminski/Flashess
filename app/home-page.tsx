@@ -22,69 +22,70 @@ const HomePage: NextPage = () => {
       {/* Nowoczesne animowane tło inspirowane Prisma.io */}
       <AnimatedBackground variant="home" />
 
-      <main className="content-layer w-full flex flex-col !pt-[0rem] !pb-[8rem] !pl-[0rem] !pr-[0rem] box-border gap-[2.625rem] max-w-full mq1225:!pb-[6rem] mq1225:box-border mq450:gap-[1.313rem] mq450:!pb-[4rem] mq450:box-border mq1525:h-auto">
-        <main className="w-full flex flex-col gap-[5.062rem] max-w-full text-left text-[0.938rem] text-White font-['Russo_One'] mq850:gap-[2.5rem] mq450:gap-[1.25rem]">
-          <div className="w-full">
-            <TopBar />
-          </div>
-          <section className="w-full flex flex-row items-center justify-center gap-[6.375rem] mq850:gap-[3.188rem] mq450:gap-[1.563rem] mq1525:flex-wrap max-w-[1400px] mx-auto">
-            <div className="flex-1 flex flex-col items-center justify-center gap-[43rem] max-w-full mq850:gap-[21.5rem] mq1225:min-w-full mq450:gap-[10.75rem]">
-              <div className="self-stretch flex flex-row items-center justify-center w-full mq1525:flex-wrap">
-                <section className="w-full max-w-[52rem] flex flex-col items-center justify-center !pt-[2rem] !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border text-center text-[0.938rem] font-['Russo_One'] mq850:!pt-[1.5rem] mq850:box-border mq850:min-w-full mq1525:flex-1">
-                  <div className="self-stretch flex flex-col items-center justify-start gap-[5rem] max-w-full mq850:gap-[2.5rem] mq450:gap-[1.5rem]">
-                    <div className="relative z-[1]">
-                      <p className="!m-0 text-lg">
-                        <span className="text-[rgba(36,245,228,0.84)] gradient-text">
-                          Flashess
-                        </span>{" "}
-                        is a chess training platform for opening preparation and
-                        tactical sharpness
-                      </p>
-                      <p className="!m-0">&nbsp;</p>
-                      <p className="!m-0 text-lg">
-                        {`In `}
-                        <span className="text-[#FF0000]">Training</span>
-                        {` `}Mode you practice curated exercise sets with
-                        real-time move validation, random mode, vision & hint
-                        tools, auto-start opening moves and a mistake review
-                        panel
-                      </p>
-                      <p className="!m-0">&nbsp;</p>
-                      <p className="!m-0 text-lg">
-                        {`In `}
-                        <span className="text-[#00FFA3]">Creation</span>
-                        {` `}Mode you import PGNs (e.g. from Lichess), use the
-                        opening tree and vision tools to analyze positions and
-                        turn them into custom exercises stored locally and
-                        optionally synced to the cloud
-                      </p>
-                    </div>
-                    <div className="self-stretch flex flex-row items-center justify-center !pt-[2rem] !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border max-w-full">
-                      <div className="flex flex-col items-center justify-start gap-[3.5rem] max-w-full mq450:gap-[1.75rem]">
-                        <Buttons
-                          property1="Default"
-                          logInButtonMarginTop="unset"
-                          logInButtonHeight="4rem"
-                          logInButtonWidth="28rem"
-                          bUTTON="Training Mode"
-                          bUTTONColor="#FF0000"
-                          secondWordColor="#fff"
-                          onLogInButtonContainerClick={onTRANINGTextClick}
-                        />
-                        <Buttons
-                          property1="Default"
-                          logInButtonMarginTop="unset"
-                          onLogInButtonContainerClick={onButtonsContainerClick}
-                          logInButtonHeight="4rem"
-                          logInButtonWidth="28rem"
-                          bUTTON="Creation Mode"
-                          bUTTONColor="#00FFA3"
-                          secondWordColor="#fff"
-                        />
-                      </div>
-                    </div>
+      <main className="content-layer w-full flex flex-col items-center !pt-[0rem] !pb-[6rem] !pl-[0rem] !pr-[0rem] box-border gap-[2.625rem] max-w-full mq1225:!pb-[4rem] mq1225:box-border mq450:gap-[1.5rem] mq450:!pb-[3rem] mq450:box-border">
+        <div className="w-full">
+          <TopBar />
+        </div>
+
+        <main className="w-full flex flex-col items-center justify-center px-4 text-left text-[0.938rem] text-White font-['Russo_One']">
+          <section className="w-full flex items-center justify-center mt-8 md:mt-10">
+            <div className="w-full max-w-[52rem] glass-panel rounded-3xl py-10 md:py-12 px-6 md:px-10 flex flex-col items-center justify-center text-center gap-[3.5rem] mq850:gap-[2.5rem] mq450:gap-[1.75rem]">
+              <div className="self-stretch flex flex-col items-center justify-start gap-[5rem] max-w-full mq850:gap-[2.5rem] mq450:gap-[1.5rem]">
+                <div className="relative z-[1]">
+                  <h1 className="mt-0 md:mt-1 mb-5 md:mb-6 text-xl md:text-2xl tracking-wide">
+                    <span className="gradient-text">Flash</span> + Chess
+                  </h1>
+                  <p className="!m-0 text-lg">
+                    <span className="text-[rgba(36,245,228,0.84)] gradient-text">
+                      Flashess
+                    </span>{" "}
+                    is a chess training platform for opening preparation and
+                    tactical sharpness
+                  </p>
+                  <p className="!m-0">&nbsp;</p>
+                  <p className="!m-0 text-lg">
+                    {`In `}
+                    <span className="text-[#FF0000]">Training</span>
+                    {` `}Mode you practice curated exercise sets with
+                    real-time move validation, random mode, vision & hint
+                    tools, auto-start opening moves and a mistake review
+                    panel
+                  </p>
+                  <p className="!m-0">&nbsp;</p>
+                  <p className="!m-0 text-lg">
+                    {`In `}
+                    <span className="text-[#00FFA3]">Creation</span>
+                    {` `}Mode you import PGNs (e.g. from Lichess), use the
+                    opening tree and vision tools to analyze positions and
+                    turn them into custom exercises stored locally and
+                    optionally synced to the cloud
+                  </p>
+                </div>
+
+                <div className="self-stretch flex flex-row items-center justify-center !pt-[0.75rem] !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border max-w-full">
+                  <div className="flex flex-col items-center justify-start gap-[1.25rem] max-w-full mq450:gap-[0.75rem]">
+                    <Buttons
+                      property1="Default"
+                      logInButtonMarginTop="unset"
+                      logInButtonHeight="4rem"
+                      logInButtonWidth="28rem"
+                      bUTTON="Training Mode"
+                      bUTTONColor="#FF0000"
+                      secondWordColor="#fff"
+                      onLogInButtonContainerClick={onTRANINGTextClick}
+                    />
+                    <Buttons
+                      property1="Default"
+                      logInButtonMarginTop="unset"
+                      onLogInButtonContainerClick={onButtonsContainerClick}
+                      logInButtonHeight="4rem"
+                      logInButtonWidth="28rem"
+                      bUTTON="Creation Mode"
+                      bUTTONColor="#00FFA3"
+                      secondWordColor="#fff"
+                    />
                   </div>
-                </section>
+                </div>
               </div>
             </div>
           </section>
