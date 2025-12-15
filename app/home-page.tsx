@@ -30,31 +30,33 @@ const HomePage: NextPage = () => {
           <section className="w-full flex flex-row items-center justify-center gap-[6.375rem] mq850:gap-[3.188rem] mq450:gap-[1.563rem] mq1525:flex-wrap max-w-[1400px] mx-auto">
             <div className="flex-1 flex flex-col items-center justify-center gap-[43rem] max-w-full mq850:gap-[21.5rem] mq1225:min-w-full mq450:gap-[10.75rem]">
               <div className="self-stretch flex flex-row items-center justify-center w-full mq1525:flex-wrap">
-                <section className="w-[46.563rem] flex flex-col items-center justify-center !pt-[2rem] !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border max-w-full text-center text-[0.938rem] font-['Russo_One'] mq850:!pt-[1.5rem] mq850:box-border mq850:min-w-full mq1525:flex-1">
+                <section className="w-full max-w-[52rem] flex flex-col items-center justify-center !pt-[2rem] !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border text-center text-[0.938rem] font-['Russo_One'] mq850:!pt-[1.5rem] mq850:box-border mq850:min-w-full mq1525:flex-1">
                   <div className="self-stretch flex flex-col items-center justify-start gap-[5rem] max-w-full mq850:gap-[2.5rem] mq450:gap-[1.5rem]">
                     <div className="relative z-[1]">
                       <p className="!m-0 text-lg">
                         <span className="text-[rgba(36,245,228,0.84)] gradient-text">
                           Flashess
                         </span>{" "}
-                        is a flashcard-style chess training platform built for
-                        opening preparation and tactical sharpness
+                        is a chess training platform for opening preparation and
+                        tactical sharpness
                       </p>
                       <p className="!m-0">&nbsp;</p>
                       <p className="!m-0 text-lg">
                         {`In `}
                         <span className="text-[#FF0000]">Training</span>
-                        {` `}Mode, you can practice using position sets — either
-                        your own or shared by others — through classic formats
-                        like puzzles, puzzle rush, time attack, or sudden death
+                        {` `}Mode you practice curated exercise sets with
+                        real-time move validation, random mode, vision & hint
+                        tools, auto-start opening moves and a mistake review
+                        panel
                       </p>
                       <p className="!m-0">&nbsp;</p>
                       <p className="!m-0 text-lg">
                         {`In `}
                         <span className="text-[#00FFA3]">Creation</span>
-                        {` `}Mode, you can load games from other platforms like
-                        Lichess, explore variations like an opening tree, and
-                        turn any position into a flashcard
+                        {` `}Mode you import PGNs (e.g. from Lichess), use the
+                        opening tree and vision tools to analyze positions and
+                        turn them into custom exercises stored locally and
+                        optionally synced to the cloud
                       </p>
                     </div>
                     <div className="self-stretch flex flex-row items-center justify-center !pt-[2rem] !pb-[0rem] !pl-[0rem] !pr-[0rem] box-border max-w-full">
