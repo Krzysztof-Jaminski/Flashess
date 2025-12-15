@@ -69,16 +69,36 @@ const RightPanel: React.FC<RightPanelProps> = ({
 
   return (
     <div className="glass-panel w-[300px] rounded-lg p-4 flex flex-col" style={{ minHeight: 705, marginTop: 0, alignSelf: 'flex-start' }}>
-      <div className="mb-4">
-        <label htmlFor="maxMovesInput" className="block text-white/80 text-sm mb-1">Moves limit (0 = until the end):</label>
-        <AppNumberInput
-          id="maxMovesInput"
-          value={userMaxMoves}
-          onChange={setUserMaxMoves}
-          min={0}
-          placeholder="e.g. 20"
-          className="max-w-[90px] mb-2"
-        />
+      <div className="mb-4 flex items-end gap-4">
+        <div>
+          <label htmlFor="maxMovesInput" className="block text-white/80 text-sm mb-1">
+            Moves limit (0 = until the end):
+          </label>
+          <AppNumberInput
+            id="maxMovesInput"
+            value={userMaxMoves}
+            onChange={setUserMaxMoves}
+            min={0}
+            placeholder="e.g. 20"
+            className="max-w-[90px] mb-2"
+          />
+        </div>
+        {autoStartingMoves && (
+          <div>
+            <label htmlFor="autoMovesLimitInput" className="block text-white/80 text-sm mb-1">
+              Automatic moves up to move:
+            </label>
+            <AppNumberInput
+              id="autoMovesLimitInput"
+              value={autoMovesLimit}
+              onChange={setAutoMovesLimit}
+              min={0}
+              max={parseInt(userMaxMoves) || undefined}
+              placeholder="e.g. 3"
+              className="max-w-[90px] mb-2"
+            />
+          </div>
+        )}
       </div>
       <div className="mb-4 flex items-center gap-2">
         <Buttons
@@ -88,20 +108,6 @@ const RightPanel: React.FC<RightPanelProps> = ({
         />
         <span className="text-white/80 text-sm">Automatic starting moves</span>
       </div>
-      {autoStartingMoves && (
-        <div className="mb-4">
-          <label htmlFor="autoMovesLimitInput" className="block text-white/80 text-sm mb-1">Automatic moves up to move:</label>
-          <AppNumberInput
-            id="autoMovesLimitInput"
-            value={autoMovesLimit}
-            onChange={setAutoMovesLimit}
-            min={0}
-            max={parseInt(userMaxMoves) || undefined}
-            placeholder="e.g. 3"
-            className="max-w-[90px] mb-2"
-          />
-        </div>
-      )}
       <div className="mb-4 flex items-center gap-2">
         <Buttons
           bUTTON={hintMode ? "ON" : "OFF"}
