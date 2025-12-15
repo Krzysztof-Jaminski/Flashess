@@ -851,7 +851,7 @@ const CreationPage: NextPage = () => {
                         onClick={() => {
                           goToHistoryIndex(moveIdx);
                         }}
-                        title={`Pokaż pozycję po ruchu ${line}`}
+                        title={`Show position after move ${line}`}
                         tabIndex={0}
                         role="button"
                         onKeyDown={(e) => {

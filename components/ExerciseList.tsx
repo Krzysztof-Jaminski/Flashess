@@ -241,7 +241,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
                       <span 
                         className="text-[0.64rem] px-1.5 py-0.5 rounded-full bg-gray-800 text-white border border-gray-600 flex items-center gap-0.5"
                         style={{ transform: 'scale(0.8)', transformOrigin: 'left center' }}
-                        title="Black perspective - graj jako czarne"
+                        title="Black perspective - play as Black"
                       >
                         <span className="w-1.5 h-1.5 bg-white rounded-sm"></span>
                         BLACK
@@ -250,7 +250,7 @@ const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, currentExercise,
                       <span 
                         className="text-[0.64rem] px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-800 border border-gray-400 flex items-center gap-0.5"
                         style={{ transform: 'scale(0.8)', transformOrigin: 'left center' }}
-                        title="White perspective - graj jako białe"
+                        title="White perspective - play as White"
                       >
                         <span className="w-1.5 h-1.5 bg-black rounded-sm"></span>
                         WHITE
